@@ -118,7 +118,42 @@ client.on(Events.GuildMemberAdd, async member => {
 // === CLIQUE NO BOTÃO DE VERIFICAÇÃO ===
 client.on(Events.InteractionCreate, async interaction => {
   if (!interaction.isButton()) return;
-  if (interaction.customId !== "verify_button") return;
+
+  if (interaction.customId === "verify_button") {
+    const guild = interaction.guild;
+    const member = await guild.members.fetch(interaction.user.id);
+
+    const roleDesconhecido = guild.roles.cache.find(r => r.name === "Desconhecido");
+    const roleMembro = guild.roles.cache.find(r => r.name === "Membro da Comunidade");
+
+    if (!roleDesconhecido || !roleMembro) {
+      return interaction.reply({
+        content: "⚠️ Ocorreu um erro — roles não encontradas. Contacta um admin.",
+        ephemeral: true
+      });
+    }
+
+    try {
+      // Remove a role "Desconhecido" e adiciona "Membro da Comunidade"
+      await member.roles.remove(roleDesconhecido).catch(console.error);
+      await member.roles.add(roleMembro).catch(console.error);
+
+      await interaction.reply({
+        content: "✅ Verificação concluída! Agora tens acesso completo ao servidor.",
+        ephemeral: true
+      });
+
+      console.log(`✔️ ${member.user.tag} foi verificado e recebeu o cargo Membro da Comunidade.`);
+    } catch (err) {
+      console.error("Erro ao verificar:", err);
+      await interaction.reply({
+        content: "❌ Ocorreu um erro ao atribuir o cargo. Verifica se o bot tem permissão para gerir funções.",
+        ephemeral: true
+      });
+    }
+  }
+});
+
 
   const member = interaction.member;
   const guild = interaction.guild;
@@ -162,3 +197,4 @@ client.on("messageCreate", async message => {
 });
 
 client.login(TOKEN);
+
