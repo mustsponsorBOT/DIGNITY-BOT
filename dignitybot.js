@@ -146,7 +146,7 @@ client.on('messageCreate', async message => {
     case 'instagram':
       return message.author.send('📸 Instagram: https://www.instagram.com/must_savage');
     case 'telegram':
-      return message.author.send('💬 Telegram: https://t.me/mustt_tv');
+      return message.author.send('💬 Telegram: https://t.me/+qKBbJZ-RQ5FlNTE0');
     case 'uptime': {
       const joinedAt = message.member.joinedAt;
       const agora = new Date();
@@ -164,3 +164,4 @@ client.on('messageCreate', async message => {
 // =========================
 // ⚠️ SUBSTITUI AQUI PELO TEU TOKEN REAL DO DISCORD ⚠️
 client.login("BOT_TOKEN");
+
