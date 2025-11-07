@@ -382,7 +382,11 @@ client.on(Events.MessageCreate, async (message) => {
             const hours = Math.floor((diffMs / (1000 * 60 * 60)) % 24);
             const minutes = Math.floor((diffMs / (1000 * 60)) % 60);
             const joinedStr = joined.toLocaleString('pt-PT');
-            await message.author.send(`🕒 Primeiro dia no servidor: ${joinedStr}\n⏱️ Tempo desde então: ${days} dias, ${hours} horas e ${minutes} minutos.`).catch(()=>{ await message.reply('❌ Não consegui enviar DM.'); });
+            try {
+  await message.author.send(`🕒 Primeiro dia no servidor: ${joinedStr}\n⏱️ Tempo desde então: ${days} dias, ${hours} horas e ${minutes} minutos.`);
+} catch (err) {
+  message.reply('❌ Não consegui enviar DM.');
+}
           }
           break;
         case 'donate':
@@ -438,3 +442,4 @@ client.login(BOT_TOKEN).then(() => {
 }).catch(err => {
   console.error('Erro ao iniciar sessão do bot (Token inválido?):', err);
 });
+
