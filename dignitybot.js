@@ -1,200 +1,166 @@
-const {
-  Client,
-  GatewayIntentBits,
-  PermissionsBitField,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  Events,
-  EmbedBuilder
-} = require("discord.js");
+// =========================
+// DIGNITYBOT - VERSÃO COMPLETA E FINAL
+// =========================
 
-const TOKEN = process.env.BOT_TOKEN;
-const SERVER_ID = "567293649826873345";
+const { Client, GatewayIntentBits, Partials, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
+const moment = require('moment');
 
+// =========================
+// CONFIGURAÇÕES GERAIS
+// =========================
+const PREFIX = '!';
+const CANAL_REGRAS = 'regras';
+const CANAL_REGISTO = 'registo';
+const CANAL_COMANDOS = 'comandos';
+
+// === CARGOS ===
+const cargos = {
+  admin: 'Admin',
+  moderador: 'Moderador',
+  streamer: 'STREAMER',
+  membro: 'Membro da Comunidade',
+  desconhecido: 'Desconhecido',
+  join: 'Join'
+};
+
+// =========================
+// INICIALIZAÇÃO DO CLIENTE
+// =========================
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.DirectMessages,
   ],
+  partials: [Partials.Channel],
 });
 
-// === QUANDO O BOT ARRANCA ===
-client.once("ready", async () => {
+// =========================
+// BOT ONLINE
+// =========================
+client.once('ready', async () => {
   console.log(`✅ Bot online como ${client.user.tag}`);
+  console.log(`🔗 Conectado a ${client.guilds.cache.size} servidor(es)`);
 
-  const guild = await client.guilds.fetch(SERVER_ID);
+  client.guilds.cache.forEach(async guild => {
+    console.log(`🔗 Conectado ao servidor: ${guild.name}`);
 
-  // === Roles ===
-  const getOrCreateRole = async (name, color, reason) => {
-    let role = guild.roles.cache.find(r => r.name === name);
-    if (!role) role = await guild.roles.create({ name, color, reason });
-    return role;
-  };
-
-  const roleAdmin = await getOrCreateRole("Admin", "Red");
-  const roleMod = await getOrCreateRole("Moderador", "Blue");
-  const roleStreamer = await getOrCreateRole("STREAMER", "Green");
-  const roleMembro = await getOrCreateRole("Membro da Comunidade", "Grey");
-  const roleDesconhecido = await getOrCreateRole("Desconhecido", "DarkGrey");
-  const roleJoin = await getOrCreateRole("Join", "Orange");
-
-  const regrasChannel = guild.channels.cache.find(c => c.name === "regras");
-  const registoChannel = guild.channels.cache.find(c => c.name === "registo");
-
-  if (!regrasChannel) return console.warn("⚠️ Canal #regras não encontrado!");
-  if (!registoChannel) return console.warn("⚠️ Canal #registo não encontrado!");
-
-  // Permissões do canal regras
-  await regrasChannel.permissionOverwrites.edit(guild.roles.everyone, {
-    ViewChannel: true,
-    SendMessages: false,
-  });
-
-  // Ocultar canais para Desconhecido
-  for (const [id, channel] of guild.channels.cache) {
-    if (channel.name !== "regras") {
-      await channel.permissionOverwrites.edit(roleDesconhecido, {
-        ViewChannel: false,
-      });
+    for (const key in cargos) {
+      let role = guild.roles.cache.find(r => r.name === cargos[key]);
+      if (!role) {
+        role = await guild.roles.create({
+          name: cargos[key],
+          color: key === 'join' ? 'Gold' : 'Default',
+          reason: 'Criar cargo necessário',
+        });
+        console.log(`✅ Cargo criado: ${cargos[key]}`);
+      } else {
+        console.log(`✅ Role já existe: ${cargos[key]}`);
+      }
     }
-  }
-
-  // Permissões da role Join
-  for (const [id, channel] of guild.channels.cache) {
-    await channel.permissionOverwrites.edit(roleJoin, {
-      ViewChannel: true,
-      Connect: true,
-      Speak: true,
-      SendMessages: true,
-    });
-  }
-
-  // Mensagem de verificação
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId("verify_button")
-      .setLabel("✅ Verificar Identidade")
-      .setStyle(ButtonStyle.Success)
-  );
-
-  const messages = await regrasChannel.messages.fetch({ limit: 10 });
-  const existingMessage = messages.find(m => m.author.id === client.user.id);
-
-  if (!existingMessage) {
-    await regrasChannel.send({
-      content: "👋 **Bem-vindo à Comunidade Dignity!**\n\nPara desbloquear o acesso ao servidor, lê as regras e clica abaixo para confirmar a tua identidade:",
-      components: [row],
-    });
-  }
-
-  console.log("✅ Configuração inicial concluída!");
+  });
 });
 
-// === NOVO UTILIZADOR ENTRA ===
-client.on(Events.GuildMemberAdd, async member => {
-  const guild = member.guild;
-  const roleDesconhecido = guild.roles.cache.find(r => r.name === "Desconhecido");
-  const registoChannel = guild.channels.cache.find(c => c.name === "registo");
+// =========================
+// NOVO MEMBRO ENTRA
+// =========================
+client.on('guildMemberAdd', async member => {
+  const cargoDesconhecido = member.guild.roles.cache.find(r => r.name === cargos.desconhecido);
+  await member.roles.add(cargoDesconhecido);
 
-  if (roleDesconhecido) await member.roles.add(roleDesconhecido);
+  const canalRegisto = member.guild.channels.cache.find(c => c.name === CANAL_REGISTO);
+  if (!canalRegisto) return;
 
-  if (registoChannel) {
-    const embed = new EmbedBuilder()
-      .setColor("Blue")
-      .setTitle("🎉 Bem-vindo à Comunidade Dignity Esports!")
-      .setDescription(`👋 Olá ${member}, lê as regras em <#${guild.channels.cache.find(c => c.name === "regras").id}> e confirma a tua identidade para aceder ao servidor!`)
-      .setThumbnail(member.user.displayAvatarURL())
-      .setTimestamp();
+  const embed = new EmbedBuilder()
+    .setColor('#FFD700')
+    .setTitle(`👋 Bem-vindo à comunidade Dignity Esports, ${member.user.username}!`)
+    .setDescription('Para teres acesso ao servidor, lê as regras e confirma a tua identidade abaixo 👇')
+    .setImage('https://i.imgur.com/Uue1yCk.png')
+    .setTimestamp();
 
-    await registoChannel.send({ embeds: [embed] });
-  }
+  const botao = new ButtonBuilder()
+    .setCustomId('verificar')
+    .setLabel('✅ Verificar Identidade')
+    .setStyle(ButtonStyle.Success);
 
-  console.log(`👤 Novo utilizador entrou: ${member.user.tag}`);
+  const row = new ActionRowBuilder().addComponents(botao);
+
+  await canalRegisto.send({ embeds: [embed], components: [row] });
 });
 
-// === CLIQUE NO BOTÃO DE VERIFICAÇÃO ===
-client.on(Events.InteractionCreate, async interaction => {
+// =========================
+// CLIQUE NO BOTÃO DE VERIFICAÇÃO
+// =========================
+client.on('interactionCreate', async interaction => {
   if (!interaction.isButton()) return;
 
-  if (interaction.customId === "verify_button") {
-    const guild = interaction.guild;
-    const member = await guild.members.fetch(interaction.user.id);
+  if (interaction.customId === 'verificar') {
+    const membro = interaction.member;
+    const cargoDesconhecido = membro.guild.roles.cache.find(r => r.name === cargos.desconhecido);
+    const cargoMembro = membro.guild.roles.cache.find(r => r.name === cargos.membro);
 
-    const roleDesconhecido = guild.roles.cache.find(r => r.name === "Desconhecido");
-    const roleMembro = guild.roles.cache.find(r => r.name === "Membro da Comunidade");
+    await membro.roles.remove(cargoDesconhecido).catch(() => {});
+    await membro.roles.add(cargoMembro).catch(() => {});
 
-    if (!roleDesconhecido || !roleMembro) {
-      return interaction.reply({
-        content: "⚠️ Ocorreu um erro — roles não encontradas. Contacta um admin.",
-        ephemeral: true
-      });
-    }
-
-    try {
-      // Remove a role "Desconhecido" e adiciona "Membro da Comunidade"
-      await member.roles.remove(roleDesconhecido).catch(console.error);
-      await member.roles.add(roleMembro).catch(console.error);
-
-      await interaction.reply({
-        content: "✅ Verificação concluída! Agora tens acesso completo ao servidor.",
-        ephemeral: true
-      });
-
-      console.log(`✔️ ${member.user.tag} foi verificado e recebeu o cargo Membro da Comunidade.`);
-    } catch (err) {
-      console.error("Erro ao verificar:", err);
-      await interaction.reply({
-        content: "❌ Ocorreu um erro ao atribuir o cargo. Verifica se o bot tem permissão para gerir funções.",
-        ephemeral: true
-      });
-    }
+    await interaction.reply({ content: '✅ Verificação concluída! Bem-vindo à comunidade Dignity Esports!', ephemeral: true });
   }
 });
 
-
-  const member = interaction.member;
-  const guild = interaction.guild;
-  const roleDesconhecido = guild.roles.cache.find(r => r.name === "Desconhecido");
-  const roleMembro = guild.roles.cache.find(r => r.name === "Membro da Comunidade");
-
-  if (roleDesconhecido) await member.roles.remove(roleDesconhecido);
-  if (roleMembro) await member.roles.add(roleMembro);
-
-  await interaction.reply({
-    content: "✅ Identidade verificada! Agora tens acesso à comunidade.",
-    ephemeral: true,
-  });
-
-  console.log(`✔️ ${member.user.tag} foi verificado.`);
-});
-
-// === COMANDOS ===
-client.on("messageCreate", async message => {
+// =========================
+// COMANDOS
+// =========================
+client.on('messageCreate', async message => {
   if (message.author.bot) return;
 
-  const commands = {
-    "!steam": "Steam: https://steamcommunity.com/id/musttopzor/",
-    "!twitch": "Twitch: https://www.twitch.tv/mustt_tv",
-    "!tiktok": "TikTok: https://www.tiktok.com/@must_savage",
-    "!youtube": "YouTube: https://www.youtube.com/@Mustyzord",
-    "!instagram": "Instagram: https://www.instagram.com/must_savage",
-    "!!telegram": "Airsoft Telegram: http://t.me/+qKBbJZ-RQ5FINTE0"
-  };
+  const canalComandos = message.guild.channels.cache.find(c => c.name === CANAL_COMANDOS);
+  if (!canalComandos) return;
 
-  const command = message.content.toLowerCase();
-  if (commands[command]) {
-    try {
-      await message.author.send(commands[command]);
-      await message.delete().catch(() => {});
-      console.log(`📩 Enviado comando ${command} por DM a ${message.author.tag}`);
-    } catch {
-      console.log(`⚠️ Não foi possível enviar DM a ${message.author.tag}`);
+  if (!message.content.startsWith(PREFIX)) return;
+
+  const args = message.content.slice(PREFIX.length).trim().split(' ');
+  const command = args.shift().toLowerCase();
+
+  // Se o comando for usado fora do canal correto
+  if (message.channel.id !== canalComandos.id) {
+    await message.delete().catch(() => {});
+    return message.author.send(`⚠️ Usa os comandos apenas no canal **#${CANAL_COMANDOS}**.`);
+  }
+
+  switch (command) {
+    case 'steam':
+      return message.author.send('🎮 Steam: https://steamcommunity.com/id/musttopzor/');
+    case 'faceit':
+      return message.author.send('🔥 Faceit: https://www.faceit.com/pt/players/MUST');
+    case 'tarkov':
+      return message.author.send('🎯 Nome no Tarkov: Mustt');
+    case 'donate':
+      return message.author.send('💰 Donate: EM UPDATE');
+    case 'twitch':
+      return message.author.send('📺 Twitch: https://www.twitch.tv/mustt_tv');
+    case 'tiktok':
+      return message.author.send('🎬 TikTok: https://www.tiktok.com/@must_savage');
+    case 'youtube':
+      return message.author.send('▶️ YouTube: https://www.youtube.com/@Mustyzord');
+    case 'instagram':
+      return message.author.send('📸 Instagram: https://www.instagram.com/must_savage');
+    case 'telegram':
+      return message.author.send('💬 Telegram: https://t.me/mustt_tv');
+    case 'uptime': {
+      const joinedAt = message.member.joinedAt;
+      const agora = new Date();
+      const diff = moment.duration(agora - joinedAt);
+      const dias = diff.asDays().toFixed(0);
+      return message.reply(`🕓 Entraste no servidor em **${moment(joinedAt).format('DD/MM/YYYY')}** — há aproximadamente **${dias} dias**!`);
     }
+    default:
+      return message.reply('❌ Comando inválido. Usa apenas os comandos disponíveis no canal de comandos.');
   }
 });
 
-client.login(TOKEN);
-
+// =========================
+// TOKEN DO BOT
+// =========================
+// ⚠️ SUBSTITUI AQUI PELO TEU TOKEN REAL DO DISCORD ⚠️
+client.login("BOT_TOKEN");
