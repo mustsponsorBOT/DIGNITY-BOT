@@ -6,166 +6,158 @@ const {
   ButtonBuilder,
   ButtonStyle,
   Events,
-  AttachmentBuilder,
+  EmbedBuilder
 } = require("discord.js");
-const path = require("path");
 
 const TOKEN = process.env.BOT_TOKEN;
-
-const SERVER_ID = "567293649826873345"; // ID do servidor
+const SERVER_ID = "567293649826873345";
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.MessageContent
   ],
 });
 
-client.once(Events.ClientReady, async () => {
+// === QUANDO O BOT ARRANCA ===
+client.once("ready", async () => {
   console.log(`✅ Bot online como ${client.user.tag}`);
 
-  try {
-    const guild = await client.guilds.fetch(SERVER_ID);
-    console.log(`🔗 Conectado ao servidor: ${guild.name}`);
+  const guild = await client.guilds.fetch(SERVER_ID);
 
-    // === Criar ou obter roles ===
-    const getOrCreateRole = async (name, color, reason) => {
-      let role = guild.roles.cache.find(r => r.name.toLowerCase() === name.toLowerCase());
-      if (!role) {
-        role = await guild.roles.create({ name, color, reason });
-        console.log(`🆕 Criada role: ${name}`);
-      } else {
-        console.log(`✅ Role já existe: ${name}`);
-      }
-      return role;
-    };
+  // === Roles ===
+  const getOrCreateRole = async (name, color, reason) => {
+    let role = guild.roles.cache.find(r => r.name === name);
+    if (!role) role = await guild.roles.create({ name, color, reason });
+    return role;
+  };
 
-    const roleAdmin = await getOrCreateRole("Admin", "Red");
-    const roleMod = await getOrCreateRole("Moderador", "Blue");
-    const roleStreamer = await getOrCreateRole("STREAMER", "Green");
-    const roleMembro = await getOrCreateRole("Membro da Comunidade", "Grey");
-    const roleDesconhecido = await getOrCreateRole("Desconhecido", "DarkGrey");
-    const roleJoin = await getOrCreateRole("Join", "Orange");
+  const roleAdmin = await getOrCreateRole("Admin", "Red");
+  const roleMod = await getOrCreateRole("Moderador", "Blue");
+  const roleStreamer = await getOrCreateRole("STREAMER", "Green");
+  const roleMembro = await getOrCreateRole("Membro da Comunidade", "Grey");
+  const roleDesconhecido = await getOrCreateRole("Desconhecido", "DarkGrey");
+  const roleJoin = await getOrCreateRole("Join", "Orange");
 
-    console.log("🎭 Todas as roles foram verificadas ou criadas.");
+  const regrasChannel = guild.channels.cache.find(c => c.name === "regras");
+  const registoChannel = guild.channels.cache.find(c => c.name === "registo");
 
-    // === Procurar ou criar canal de regras ===
-    let regrasChannel = guild.channels.cache.find(c =>
-      c.name.toLowerCase().includes("regras")
-    );
+  if (!regrasChannel) return console.warn("⚠️ Canal #regras não encontrado!");
+  if (!registoChannel) return console.warn("⚠️ Canal #registo não encontrado!");
 
-    if (!regrasChannel) {
-      console.log("📜 Canal #regras não encontrado, criando...");
-      regrasChannel = await guild.channels.create({
-        name: "regras",
-        type: 0, // Canal de texto
-        topic: "Regras oficiais da Comunidade Dignity Esports",
-      });
-    }
+  // Permissões do canal regras
+  await regrasChannel.permissionOverwrites.edit(guild.roles.everyone, {
+    ViewChannel: true,
+    SendMessages: false,
+  });
 
-    console.log(`⚙️ A aplicar permissões no canal #${regrasChannel.name}...`);
-
-    // Permissões do canal de regras
-    await regrasChannel.permissionOverwrites.edit(guild.roles.everyone, {
-      ViewChannel: true,
-      SendMessages: false,
-    });
-
-    await regrasChannel.permissionOverwrites.edit(roleDesconhecido, {
-      ViewChannel: true,
-      SendMessages: false,
-    });
-
-    await regrasChannel.permissionOverwrites.edit(roleMembro, {
-      ViewChannel: true,
-      SendMessages: true,
-    });
-
-    // === Ocultar todos os outros canais dos Desconhecidos ===
-    const otherChannels = guild.channels.cache.filter(
-      c => c.id !== regrasChannel.id && c.type === 0
-    );
-
-    for (const [id, channel] of otherChannels) {
+  // Ocultar canais para Desconhecido
+  for (const [id, channel] of guild.channels.cache) {
+    if (channel.name !== "regras") {
       await channel.permissionOverwrites.edit(roleDesconhecido, {
         ViewChannel: false,
       });
     }
-
-    console.log("🔒 Todos os canais (exceto #regras) estão invisíveis para Desconhecidos.");
-
-    // === Permissões da role Join ===
-    console.log("🔑 Configurando permissões da role Join...");
-    for (const [id, channel] of guild.channels.cache) {
-      await channel.permissionOverwrites.edit(roleJoin, {
-        ViewChannel: true,
-        Connect: true,
-        Speak: true,
-        SendMessages: true,
-      });
-    }
-
-    // === Botão de Verificação ===
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId("verify_button")
-        .setLabel("✅ Verificar Identidade")
-        .setStyle(ButtonStyle.Success)
-    );
-
-    const messages = await regrasChannel.messages.fetch({ limit: 10 });
-    const existingMessage = messages.find(m => m.author.id === client.user.id);
-
-    if (!existingMessage) {
-      await regrasChannel.send({
-        content:
-          "👋 **Bem-vindo à Comunidade Dignity Esports!**\n\nPara desbloquear o acesso ao servidor, lê as regras e clica abaixo para confirmar a tua identidade:",
-        components: [row],
-      });
-      console.log("📩 Mensagem de verificação enviada em #regras.");
-    } else {
-      console.log("🔁 Mensagem de verificação já existe.");
-    }
-
-    console.log("✅ Configuração concluída com sucesso!");
-  } catch (err) {
-    console.error("❌ Erro ao configurar servidor:", err);
   }
+
+  // Permissões da role Join
+  for (const [id, channel] of guild.channels.cache) {
+    await channel.permissionOverwrites.edit(roleJoin, {
+      ViewChannel: true,
+      Connect: true,
+      Speak: true,
+      SendMessages: true,
+    });
+  }
+
+  // Mensagem de verificação
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId("verify_button")
+      .setLabel("✅ Verificar Identidade")
+      .setStyle(ButtonStyle.Success)
+  );
+
+  const messages = await regrasChannel.messages.fetch({ limit: 10 });
+  const existingMessage = messages.find(m => m.author.id === client.user.id);
+
+  if (!existingMessage) {
+    await regrasChannel.send({
+      content: "👋 **Bem-vindo à Comunidade Dignity!**\n\nPara desbloquear o acesso ao servidor, lê as regras e clica abaixo para confirmar a tua identidade:",
+      components: [row],
+    });
+  }
+
+  console.log("✅ Configuração inicial concluída!");
 });
 
-// === Ao clicar no botão ===
+// === NOVO UTILIZADOR ENTRA ===
+client.on(Events.GuildMemberAdd, async member => {
+  const guild = member.guild;
+  const roleDesconhecido = guild.roles.cache.find(r => r.name === "Desconhecido");
+  const registoChannel = guild.channels.cache.find(c => c.name === "registo");
+
+  if (roleDesconhecido) await member.roles.add(roleDesconhecido);
+
+  if (registoChannel) {
+    const embed = new EmbedBuilder()
+      .setColor("Blue")
+      .setTitle("🎉 Bem-vindo à Comunidade Dignity Esports!")
+      .setDescription(`👋 Olá ${member}, lê as regras em <#${guild.channels.cache.find(c => c.name === "regras").id}> e confirma a tua identidade para aceder ao servidor!`)
+      .setThumbnail(member.user.displayAvatarURL())
+      .setTimestamp();
+
+    await registoChannel.send({ embeds: [embed] });
+  }
+
+  console.log(`👤 Novo utilizador entrou: ${member.user.tag}`);
+});
+
+// === CLIQUE NO BOTÃO DE VERIFICAÇÃO ===
 client.on(Events.InteractionCreate, async interaction => {
   if (!interaction.isButton()) return;
+  if (interaction.customId !== "verify_button") return;
 
-  if (interaction.customId === "verify_button") {
-    const member = await interaction.guild.members.fetch(interaction.user.id);
-    const roleDesconhecido = interaction.guild.roles.cache.find(r => r.name === "Desconhecido");
-    const roleMembro = interaction.guild.roles.cache.find(r => r.name === "Membro da Comunidade");
+  const member = interaction.member;
+  const guild = interaction.guild;
+  const roleDesconhecido = guild.roles.cache.find(r => r.name === "Desconhecido");
+  const roleMembro = guild.roles.cache.find(r => r.name === "Membro da Comunidade");
 
-    await member.roles.remove(roleDesconhecido).catch(() => {});
-    await member.roles.add(roleMembro);
+  if (roleDesconhecido) await member.roles.remove(roleDesconhecido);
+  if (roleMembro) await member.roles.add(roleMembro);
 
-    await interaction.reply({
-      content: "✅ Identidade verificada! Agora tens acesso à comunidade.",
-      ephemeral: true,
-    });
+  await interaction.reply({
+    content: "✅ Identidade verificada! Agora tens acesso à comunidade.",
+    ephemeral: true,
+  });
 
-    // === Canal de registo ===
-    const registoChannel = interaction.guild.channels.cache.find(c =>
-      c.name.toLowerCase().includes("registo")
-    );
-    if (registoChannel) {
-      const imagePath = path.join(__dirname, "2.png");
-      const file = new AttachmentBuilder(imagePath);
-      await registoChannel.send({
-        content: `🎉 **Bem-vindo ${interaction.user.username} à comunidade Dignity Esports!**`,
-        files: [file],
-      });
+  console.log(`✔️ ${member.user.tag} foi verificado.`);
+});
+
+// === COMANDOS ===
+client.on("messageCreate", async message => {
+  if (message.author.bot) return;
+
+  const commands = {
+    "!steam": "Steam: https://steamcommunity.com/id/musttopzor/",
+    "!twitch": "Twitch: https://www.twitch.tv/mustt_tv",
+    "!tiktok": "TikTok: https://www.tiktok.com/@must_savage",
+    "!youtube": "YouTube: https://www.youtube.com/@Mustyzord",
+    "!instagram": "Instagram: https://www.instagram.com/must_savage",
+    "!!telegram": "Airsoft Telegram: http://t.me/+qKBbJZ-RQ5FINTE0"
+  };
+
+  const command = message.content.toLowerCase();
+  if (commands[command]) {
+    try {
+      await message.author.send(commands[command]);
+      await message.delete().catch(() => {});
+      console.log(`📩 Enviado comando ${command} por DM a ${message.author.tag}`);
+    } catch {
+      console.log(`⚠️ Não foi possível enviar DM a ${message.author.tag}`);
     }
-
-    console.log(`👤 ${member.user.tag} foi verificado e recebeu o cargo 'Membro da Comunidade'.`);
   }
 });
 
