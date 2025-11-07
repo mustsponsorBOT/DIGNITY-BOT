@@ -250,10 +250,39 @@ client.on(Events.GuildMemberAdd, async (member) => {
 });
 
 // ---------- Interaction (button) handler: verification ----------
-client.on(Events.InteractionCreate, async (interaction) => {
+client.on(Events.InteractionCreate, async interaction => {
+  if (!interaction.isButton()) return;
+  if (interaction.customId !== "verify_button") return;
+
   try {
-    if (!interaction.isButton()) return;
-    if (interaction.customId !== 'dignity_verify') return;
+    const member = await interaction.guild.members.fetch(interaction.user.id);
+    const roleDesconhecido = interaction.guild.roles.cache.find(r => r.name === "Desconhecido");
+    const roleMembro = interaction.guild.roles.cache.find(r => r.name === "Membro da Comunidade");
+
+    if (!roleDesconhecido || !roleMembro) {
+      return interaction.reply({ content: "❌ Um dos cargos não existe!", ephemeral: true });
+    }
+
+    await member.roles.remove(roleDesconhecido).catch(() => {});
+    await member.roles.add(roleMembro).catch(() => {});
+
+    // **Responder imediatamente ao Discord**
+    await interaction.reply({ content: "✅ Verificação concluída!", ephemeral: true });
+
+    // Enviar mensagem no canal #registo
+    const registoChannel = interaction.guild.channels.cache.find(c => c.name === "🖊️・registo");
+    if (registoChannel) {
+      await registoChannel.send({
+        content: `🎉 Bem-vindo ${interaction.user} à comunidade Dignity Esports!`
+      });
+    }
+  } catch (err) {
+    console.error(err);
+    if (!interaction.replied) {
+      await interaction.reply({ content: "❌ Ocorreu um erro, contacta um admin.", ephemeral: true });
+    }
+  }
+});
 
     console.log(`🖱️ ${interaction.user.tag} clicou no botão de verificação.`);
 
@@ -442,4 +471,5 @@ client.login(BOT_TOKEN).then(() => {
 }).catch(err => {
   console.error('Erro ao iniciar sessão do bot (Token inválido?):', err);
 });
+
 
