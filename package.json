@@ -1,12 +1,12 @@
 {
   "name": "dignitybot",
   "version": "1.0.0",
-  "description": "Bot Discord da comunidade Dignity Esports",
   "main": "dignitybot.js",
   "scripts": {
     "start": "node dignitybot.js"
   },
   "dependencies": {
-    "discord.js": "^14.15.3"
+    "discord.js": "^14.15.3",
+    "moment": "^2.30.1"
   }
 }
