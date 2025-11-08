@@ -1,7 +1,6 @@
 const {
   Client,
   GatewayIntentBits,
-  PermissionsBitField,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
@@ -90,18 +89,29 @@ client.once("ready", async () => {
         .setStyle(ButtonStyle.Success)
     );
 
+    // Apaga mensagem antiga (se existir)
     const messages = await regrasChannel.messages.fetch({ limit: 10 });
     const existingMessage = messages.find(m => m.author.id === client.user.id);
+    if (existingMessage) await existingMessage.delete();
 
-    if (!existingMessage) {
-      await regrasChannel.send({
-        content: "👋 **Bem-vindo à Comunidade Dignity!**\n\nLê as regras e clica abaixo para confirmar a tua identidade:",
-        components: [row],
-      });
-      console.log("📩 Mensagem de verificação enviada em 📜・regras.");
-    } else {
-      console.log("🔁 Mensagem de verificação já existe.");
-    }
+    // Conteúdo das regras
+    const regrasContent = `
+🎮 **REGRAS DO SERVIDOR**  
+1️⃣ Respeito acima de tudo! Trata todos os membros com respeito. Nada de insultos, racismo, homofobia, ou qualquer tipo de discriminação.  
+2️⃣ Sem spam! Evita enviar mensagens repetidas, links desnecessários, ou fazer ping em excesso a outros membros ou staff.  
+3️⃣ Mantém o conteúdo apropriado! Proibido conteúdo ilegal, violento ou ofensivo.  
+4️⃣ Respeita as salas e os temas! Cada canal tem o seu propósito — usa o canal certo para o tema certo (ex: memes em #memes, clips em #clips).  
+5️⃣ Não divulgar sem permissão! Proibida a divulgação de outros servidores, canais ou redes sociais sem autorização da staff.  
+6️⃣ Evita discussões tóxicas! Debates são bem-vindos, mas mantém sempre o fair play. Sem drama, sem flame.  
+7️⃣ Segue as indicações dos moderadores! As decisões dos moderadores devem ser respeitadas. Se achares que houve um erro, fala em privado com calma.  
+8️⃣ Nome e foto de perfil devem ser adequados! Nada de nicks ofensivos, imitarem staff ou o streamer. Mantém algo legível e respeitoso.  
+9️⃣ Usa o micro com bom senso! Durante jogos ou chats de voz, evita gritar, fazer ruído constante ou usar soundboards em excesso.  
+🔟 Diverte-te e participa! Interage, joga com a malta, partilha clips, memes e momentos do stream. O servidor é da comunidade — faz parte dela!
+`;
+
+    // Envia nova mensagem de regras com botão
+    await regrasChannel.send({ content: regrasContent, components: [row] });
+    console.log("📩 Mensagem de verificação com regras enviada em 📜・regras.");
 
     console.log("✅ Setup inicial completo!");
   } catch (err) {
@@ -174,7 +184,6 @@ client.on("messageCreate", async message => {
     return;
   }
 
-  // Apagar mensagens fora de comandos na comunidade
   const comunidadeCategory = message.guild.channels.cache.find(c => c.name.includes("COMUNIDADE DIGNITY") && c.type === 4);
   if (comunidadeCategory && message.channel.parentId === comunidadeCategory.id && !message.content.startsWith(PREFIX)) {
     await message.delete().catch(()=>{});
