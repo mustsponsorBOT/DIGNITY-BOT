@@ -139,10 +139,67 @@ client.on('guildMemberAdd', async (member) => {
   }
 });
 
-// Interaction handler — verify button
-client.on('interactionCreate', async (interaction) => {
+// ===============================
+// 🔹 INTERAÇÃO COM O BOTÃO
+// ===============================
+client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isButton()) return;
-  if (interaction.customId !== 'dignity_verify') return;
+  if (interaction.customId !== "verify_button") return;
+
+  try {
+    const member = await interaction.guild.members.fetch(interaction.user.id);
+    const roleDesconhecido = interaction.guild.roles.cache.find(r => r.name === "Desconhecido");
+    const roleMembro = interaction.guild.roles.cache.find(r => r.name === "Membro da Comunidade");
+
+    if (!roleDesconhecido || !roleMembro) {
+      await interaction.reply({
+        content: "⚠️ Um dos cargos necessários não foi encontrado. Contacta um administrador.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    // Remove e adiciona cargos com verificação de permissões
+    await member.roles.remove(roleDesconhecido).catch(() => {});
+    await member.roles.add(roleMembro).catch(() => {});
+
+    // Mensagem privada de boas-vindas
+    try {
+      await member.send(`✅ Foste verificado com sucesso em **${interaction.guild.name}**! Bem-vindo à comunidade Dignity!`);
+    } catch (e) {
+      console.log("⚠️ Não consegui enviar DM ao utilizador.");
+    }
+
+    // Resposta no botão (obrigatória e imediata)
+    await interaction.reply({
+      content: "✅ Verificação concluída! Bem-vindo à comunidade Dignity!",
+      ephemeral: true,
+    });
+
+    // Log no canal registo
+    const registoChannel = interaction.guild.channels.cache.find(c => c.name.includes("registo"));
+    if (registoChannel) {
+      const embed = new EmbedBuilder()
+        .setColor("Green")
+        .setTitle("🎉 Novo membro verificado!")
+        .setDescription(`Bem-vindo ${interaction.user}! à comunidade Dignity Esports!`)
+        .setThumbnail(interaction.user.displayAvatarURL())
+        .setTimestamp();
+
+      await registoChannel.send({ embeds: [embed] });
+    }
+
+    console.log(`✅ ${member.user.tag} foi verificado e recebeu o cargo 'Membro da Comunidade'.`);
+  } catch (err) {
+    console.error("❌ Erro ao processar o botão:", err);
+    if (!interaction.replied) {
+      await interaction.reply({
+        content: "❌ Ocorreu um erro ao verificar a tua identidade. Tenta novamente mais tarde.",
+        ephemeral: true,
+      });
+    }
+  }
+});
 
   // Defer reply to avoid "interaction failed"
   try {
@@ -318,3 +375,4 @@ http
     res.end("DIGNITY BOT está online e operacional.");
   })
   .listen(PORT, () => console.log(`🌍 Servidor HTTP ativo na porta ${PORT}`));
+
