@@ -79,32 +79,45 @@ client.once("ready", async () => {
   console.log("✅ Setup inicial completo: roles, permissões e mensagem de verificação.");
 });
 
-// ===============================
-// 🔹 BOTÃO DE VERIFICAÇÃO
-// ===============================
-client.on(Events.InteractionCreate, async interaction => {
-  if (!interaction.isButton()) return;
-  if (interaction.customId !== "verify_button") return;
-
+// ✅ Sistema de verificação de botão
+client.on("interactionCreate", async (interaction) => {
   try {
-    const member = await interaction.guild.members.fetch(interaction.user.id);
-    const roleDesconhecido = interaction.guild.roles.cache.find(r => r.name === "Desconhecido");
-    const roleMembro = interaction.guild.roles.cache.find(r => r.name === "Membro da Comunidade");
+    if (!interaction.isButton()) return;
 
-    if (!roleDesconhecido || !roleMembro) {
-      return await interaction.reply({ content: "❌ Cargos não encontrados. Contacta um admin.", ephemeral: true });
+    if (interaction.customId === "verify_button") {
+      const guild = interaction.guild;
+      const member = guild.members.cache.get(interaction.user.id);
+
+      const verifiedRole = guild.roles.cache.find(r => r.name === "Membro da Comunidade");
+      const unverifiedRole = guild.roles.cache.find(r => r.name === "Desconhecido");
+
+      if (!verifiedRole || !unverifiedRole) {
+        return interaction.reply({ 
+          content: "⚠️ Os cargos 'Membro da Comunidade' e/ou 'Desconhecido' não foram encontrados no servidor. Verifica se existem com esses nomes exatos.", 
+          ephemeral: true 
+        });
+      }
+
+      // Remove role de não verificado e adiciona o de membro
+      await member.roles.remove(unverifiedRole).catch(() => {});
+      await member.roles.add(verifiedRole).catch(() => {});
+
+      await interaction.reply({ 
+        content: "✅ Verificação concluída! Já tens acesso à comunidade.", 
+        ephemeral: true 
+      });
     }
+  } catch (err) {
+    console.error("Erro na interação:", err);
+    if (interaction.replied || interaction.deferred) return;
+    interaction.reply({ 
+      content: "⚠️ Ocorreu um erro ao processar a tua verificação.", 
+      ephemeral: true 
+    }).catch(() => {});
+  }
+});
 
-    // Atribui e remove cargos
-    await member.roles.remove(roleDesconhecido).catch(() => {});
-    await member.roles.add(roleMembro).catch(() => {});
-
-    await interaction.reply({
-      content: "✅ Verificação concluída! Bem-vindo à comunidade Dignity!",
-      ephemeral: true,
-    });
-
-    // Envia mensagem de boas-vindas
+// Envia mensagem de boas-vindas
     const registoChannel = interaction.guild.channels.cache.find(c => c.name === "🖊️・registo");
     if (registoChannel) {
       const embed = new EmbedBuilder()
@@ -214,5 +227,6 @@ client.on("messageCreate", async message => {
 // 🔹 LOGIN
 // ===============================
 client.login(BOT_TOKEN);
+
 
 
