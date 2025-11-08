@@ -1,4 +1,4 @@
-/const {
+const {
   Client,
   GatewayIntentBits,
   PermissionsBitField,
@@ -117,29 +117,26 @@ client.on(Events.InteractionCreate, async interaction => {
   if (interaction.customId !== "verify_button") return;
 
   try {
-    await interaction.deferReply({ ephemeral: true });
-
     const guild = interaction.guild;
     const member = await guild.members.fetch(interaction.user.id);
     const roleDesconhecido = guild.roles.cache.find(r => r.name === "Desconhecido");
     const roleMembro = guild.roles.cache.find(r => r.name === "Membro da Comunidade");
 
     if (!roleDesconhecido || !roleMembro) {
-      await interaction.editReply({ content: "⚠️ Os cargos necessários não foram encontrados." });
+      await interaction.reply({ content: "⚠️ Os cargos necessários não foram encontrados.", ephemeral: true });
       return;
     }
 
     await member.roles.remove(roleDesconhecido).catch(() => {});
     await member.roles.add(roleMembro).catch(() => {});
 
-    // Mensagem privada
-    try {
-      await member.send(`✅ Foste verificado com sucesso em **${guild.name}**! Bem-vindo à comunidade Dignity!`);
-    } catch (e) {
-      console.log("⚠️ Não consegui enviar DM ao utilizador.");
-    }
+    // Responde rapidamente ao botão
+    await interaction.reply({ content: "✅ Verificação concluída! Bem-vindo à comunidade Dignity!", ephemeral: true });
 
-    await interaction.editReply({ content: "✅ Verificação concluída! Bem-vindo à comunidade Dignity!" });
+    // DM opcional
+    member.send(`✅ Foste verificado com sucesso em **${guild.name}**! Bem-vindo à comunidade Dignity!`).catch(() => {
+      console.log("⚠️ Não consegui enviar DM ao utilizador.");
+    });
 
     // Canal registo
     const registoChannel = guild.channels.cache.find(c => c.name.includes("registo"));
@@ -150,7 +147,6 @@ client.on(Events.InteractionCreate, async interaction => {
         .setDescription(`Bem-vindo ${interaction.user}! à comunidade Dignity Esports!`)
         .setThumbnail(interaction.user.displayAvatarURL())
         .setTimestamp();
-
       await registoChannel.send({ embeds: [embed] });
     }
 
