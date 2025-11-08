@@ -305,3 +305,16 @@ client.on('messageCreate', async (message) => {
 
 // login
 client.login(BOT_TOKEN).then(() => console.log('login ok')).catch(e => console.error('Erro no login:', e));
+
+// ===============================
+// 🟢 Mantém o serviço vivo no Render
+// ===============================
+const http = require("http");
+const PORT = process.env.PORT || 10000;
+
+http
+  .createServer((req, res) => {
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    res.end("DIGNITY BOT está online e operacional.");
+  })
+  .listen(PORT, () => console.log(`🌍 Servidor HTTP ativo na porta ${PORT}`));
