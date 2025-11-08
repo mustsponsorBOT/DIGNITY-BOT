@@ -188,11 +188,11 @@ client.on("messageCreate", async message => {
         const days = duration.asDays().toFixed(0);
         const hours = duration.hours();
         const minutes = duration.minutes();
-        await message.author
-          .send(
-            `🕒 Primeiro dia no servidor: ${joinedStr}\n⏱️ Tempo desde então: ${days} dias, ${hours} horas e ${minutes} minutos.`
-          )
-          .catch(() => message.reply("❌ Não consegui enviar DM."));
+        try {
+  await message.author.send(`🕒 Primeiro dia no servidor: ${joinedStr}\n⏱️ Tempo desde então: ${days} dias, ${hours} horas e ${minutes} minutos.`);
+} catch {
+  await message.reply('❌ Não consegui enviar DM.');
+}
         break;
       }
       case "donate":
@@ -227,6 +227,7 @@ client.on("messageCreate", async message => {
 // 🔹 LOGIN
 // ===============================
 client.login(BOT_TOKEN);
+
 
 
 
