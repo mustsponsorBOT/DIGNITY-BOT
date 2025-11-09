@@ -122,9 +122,55 @@ canaisBloqueio.forEach(channelName => {
   }
 });
 
-// ==== Permissões Join ====
+// ==== Configuração de permissões dos canais ====
 guild.channels.cache.forEach(channel => {
-  channel.permissionOverwrites.edit(roleJoin, { ViewChannel: true, Connect: true, Speak: true, SendMessages: true }).catch(()=>{});
+  // Canal de regras visível apenas para Desconhecidos e membros
+  if (channel.name.includes("regras")) {
+    channel.permissionOverwrites.edit(guild.roles.everyone, {
+      ViewChannel: false,
+      SendMessages: false,
+    }).catch(()=>{});
+    
+    channel.permissionOverwrites.edit(roleDesconhecido, {
+      ViewChannel: true,
+      SendMessages: false,
+    }).catch(()=>{});
+
+    channel.permissionOverwrites.edit(roleMembro, {
+      ViewChannel: true,
+      SendMessages: false,
+    }).catch(()=>{});
+  }
+  // Canais de memes e clips: todos exceto Desconhecido podem enviar
+  else if (channel.name.includes("memes") || channel.name.includes("clips")) {
+    channel.permissionOverwrites.edit(roleDesconhecido, { ViewChannel: false }).catch(()=>{});
+    channel.permissionOverwrites.edit(roleMembro, {
+      ViewChannel: true,
+      SendMessages: true,
+    }).catch(()=>{});
+    channel.permissionOverwrites.edit(roleAdmin, {
+      ViewChannel: true,
+      SendMessages: true,
+    }).catch(()=>{});
+    channel.permissionOverwrites.edit(roleMod, {
+      ViewChannel: true,
+      SendMessages: true,
+    }).catch(()=>{});
+    channel.permissionOverwrites.edit(roleStreamer, {
+      ViewChannel: true,
+      SendMessages: true,
+    }).catch(()=>{});
+  }
+  // Outros canais: visível para todos com Join
+  else {
+    channel.permissionOverwrites.edit(roleDesconhecido, { ViewChannel: false }).catch(()=>{});
+    channel.permissionOverwrites.edit(roleJoin, {
+      ViewChannel: true,
+      Connect: true,
+      Speak: true,
+      SendMessages: true,
+    }).catch(()=>{});
+  }
 });
 
 // ==== Botão de verificação ====
@@ -330,6 +376,7 @@ app.get("/", (req, res) => {
 app.listen(PORT, () => {
   console.log(`🌐 Servidor web a correr na porta ${PORT}`);
 });
+
 
 
 
