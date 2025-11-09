@@ -91,15 +91,34 @@ const canaisBloqueio = ["📸・memes", "🎬・clips"];
 canaisBloqueio.forEach(channelName => {
   const canal = guild.channels.cache.find(c => c.name === channelName);
   if (canal) {
+    // Remove acesso apenas ao Desconhecido
     canal.permissionOverwrites.edit(roleDesconhecido, {
-      ViewChannel: false,  // Desconhecido não vê
+      ViewChannel: false,
       SendMessages: false
     }).catch(() => {});
-    // Permite que todos os outros vejam e enviem mensagens
-    canal.permissionOverwrites.edit(guild.roles.everyone, {
-      ViewChannel: true,
-      SendMessages: true
-    }).catch(() => {});
+
+    // Garante que todos os membros normais podem ver e enviar mensagens
+    const roleMembro = guild.roles.cache.find(r => r.name === "Membro da Comunidade");
+    if (roleMembro) {
+      canal.permissionOverwrites.edit(roleMembro, {
+        ViewChannel: true,
+        SendMessages: true
+      }).catch(() => {});
+    }
+
+    // Garante que Admin, Moderador e Join podem enviar
+    const roleAdmin = guild.roles.cache.find(r => r.name === "Admin");
+    const roleMod = guild.roles.cache.find(r => r.name === "Moderador");
+    const roleJoin = guild.roles.cache.find(r => r.name === "Join");
+
+    [roleAdmin, roleMod, roleJoin].forEach(role => {
+      if (role) {
+        canal.permissionOverwrites.edit(role, {
+          ViewChannel: true,
+          SendMessages: true
+        }).catch(() => {});
+      }
+    });
   }
 });
 
@@ -311,6 +330,7 @@ app.get("/", (req, res) => {
 app.listen(PORT, () => {
   console.log(`🌐 Servidor web a correr na porta ${PORT}`);
 });
+
 
 
 
