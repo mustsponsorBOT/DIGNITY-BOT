@@ -80,24 +80,41 @@ await regrasChannel.permissionOverwrites.edit(roleMembro, {
 });
 
     // ==== Ocultar outros canais aos Desconhecidos ====
-    guild.channels.cache.forEach(channel => {
-      if (channel.name !== "📜・regras") {
-        channel.permissionOverwrites.edit(roleDesconhecido, { ViewChannel: false }).catch(() => {});
-      }
-    });
+guild.channels.cache.forEach(channel => {
+  if (channel.name !== "📜・regras") {
+    channel.permissionOverwrites.edit(roleDesconhecido, { ViewChannel: false }).catch(() => {});
+  }
+});
 
-    // ==== Permissões Join ====
-    guild.channels.cache.forEach(channel => {
-      channel.permissionOverwrites.edit(roleJoin, { ViewChannel: true, Connect: true, Speak: true, SendMessages: true }).catch(()=>{});
-    });
+// ==== Ajuste específico para canais 📸・memes e 🎬・clips ====
+const canaisBloqueio = ["📸・memes", "🎬・clips"];
+canaisBloqueio.forEach(channelName => {
+  const canal = guild.channels.cache.find(c => c.name === channelName);
+  if (canal) {
+    canal.permissionOverwrites.edit(roleDesconhecido, {
+      ViewChannel: false,  // Desconhecido não vê
+      SendMessages: false
+    }).catch(() => {});
+    // Permite que todos os outros vejam e enviem mensagens
+    canal.permissionOverwrites.edit(guild.roles.everyone, {
+      ViewChannel: true,
+      SendMessages: true
+    }).catch(() => {});
+  }
+});
 
-    // ==== Botão de verificação ====
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId("verify_button")
-        .setLabel("✅ Verificar Identidade")
-        .setStyle(ButtonStyle.Success)
-    );
+// ==== Permissões Join ====
+guild.channels.cache.forEach(channel => {
+  channel.permissionOverwrites.edit(roleJoin, { ViewChannel: true, Connect: true, Speak: true, SendMessages: true }).catch(()=>{});
+});
+
+// ==== Botão de verificação ====
+const row = new ActionRowBuilder().addComponents(
+  new ButtonBuilder()
+    .setCustomId("verify_button")
+    .setLabel("✅ Verificar Identidade")
+    .setStyle(ButtonStyle.Success)
+);
 
     // Verifica se já existe uma mensagem do bot com o botão de verificação
 const messages = await regrasChannel.messages.fetch({ limit: 10 });
@@ -294,6 +311,7 @@ app.get("/", (req, res) => {
 app.listen(PORT, () => {
   console.log(`🌐 Servidor web a correr na porta ${PORT}`);
 });
+
 
 
 
