@@ -65,9 +65,19 @@ client.once("ready", async () => {
     }
 
     // Permissões do canal regras
-    await regrasChannel.permissionOverwrites.edit(guild.roles.everyone, { ViewChannel: false });
-    await regrasChannel.permissionOverwrites.edit(roleDesconhecido, { ViewChannel: true, SendMessages: false });
-    await regrasChannel.permissionOverwrites.edit(roleMembro, { ViewChannel: true, SendMessages: true });
+  await regrasChannel.permissionOverwrites.edit(guild.roles.everyone, {
+  ViewChannel: false, // Oculta por padrão
+});
+
+await regrasChannel.permissionOverwrites.edit(roleDesconhecido, {
+  ViewChannel: true, // Apenas o "Desconhecido" vê para se verificar
+  SendMessages: false,
+});
+
+await regrasChannel.permissionOverwrites.edit(roleMembro, {
+  ViewChannel: true,
+  SendMessages: false, // Evita que membros verificados falem no canal de regras
+});
 
     // ==== Ocultar outros canais aos Desconhecidos ====
     guild.channels.cache.forEach(channel => {
@@ -135,6 +145,25 @@ Interage, joga com a malta, partilha clips, memes e momentos do stream. O servid
     console.log("✅ Setup inicial completo!");
   } catch (err) {
     console.error("❌ Erro no setup:", err);
+  }
+});
+
+// ===============================
+// 🔹 NOVO MEMBRO ENTRA NO SERVIDOR
+// ===============================
+client.on(Events.GuildMemberAdd, async member => {
+  try {
+    const guild = member.guild;
+    const roleDesconhecido = guild.roles.cache.find(r => r.name === "Desconhecido");
+
+    if (roleDesconhecido) {
+      await member.roles.add(roleDesconhecido);
+      console.log(`👋 Novo utilizador ${member.user.tag} recebeu o cargo 'Desconhecido'.`);
+    } else {
+      console.warn("⚠️ Cargo 'Desconhecido' não encontrado!");
+    }
+  } catch (err) {
+    console.error("❌ Erro ao atribuir cargo 'Desconhecido' ao novo membro:", err);
   }
 });
 
@@ -254,3 +283,4 @@ app.get("/", (req, res) => {
 app.listen(PORT, () => {
   console.log(`🌐 Servidor web a correr na porta ${PORT}`);
 });
+
