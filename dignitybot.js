@@ -182,21 +182,24 @@ client.on(Events.InteractionCreate, async interaction => {
   if (interaction.customId !== "verify_button") return;
 
   try {
+    // ⏳ Indica ao Discord que vamos responder depois (evita timeout)
+    await interaction.deferReply({ ephemeral: true });
+
     const guild = interaction.guild;
     const member = await guild.members.fetch(interaction.user.id);
     const roleDesconhecido = guild.roles.cache.find(r => r.name === "Desconhecido");
     const roleMembro = guild.roles.cache.find(r => r.name === "Membro da Comunidade");
 
     if (!roleDesconhecido || !roleMembro) {
-      await interaction.reply({ content: "⚠️ Os cargos necessários não foram encontrados.", ephemeral: true });
-      return;
+      return await interaction.editReply({ content: "⚠️ Os cargos necessários não foram encontrados." });
     }
 
+    // Remove o cargo Desconhecido e adiciona Membro da Comunidade
     await member.roles.remove(roleDesconhecido).catch(() => {});
     await member.roles.add(roleMembro).catch(() => {});
 
-    // Responde rapidamente ao botão
-    await interaction.reply({ content: "✅ Verificação concluída! Bem-vindo à comunidade Dignity!", ephemeral: true });
+    // Atualiza a resposta do botão
+    await interaction.editReply({ content: "✅ Verificação concluída! Bem-vindo à comunidade Dignity!" });
 
     // DM opcional
     member.send(`✅ Foste verificado com sucesso em **${guild.name}**! Bem-vindo à comunidade Dignity!`).catch(() => {
@@ -218,7 +221,8 @@ client.on(Events.InteractionCreate, async interaction => {
     console.log(`✅ ${member.user.tag} verificado e recebeu 'Membro da Comunidade'.`);
   } catch (err) {
     console.error("❌ Erro ao processar botão:", err);
-    if (!interaction.replied) {
+    // Só responde se a interação ainda não foi respondida ou adiada
+    if (!interaction.replied && !interaction.deferred) {
       await interaction.reply({ content: "❌ Ocorreu um erro ao verificar. Tenta novamente.", ephemeral: true });
     }
   }
@@ -290,5 +294,6 @@ app.get("/", (req, res) => {
 app.listen(PORT, () => {
   console.log(`🌐 Servidor web a correr na porta ${PORT}`);
 });
+
 
 
