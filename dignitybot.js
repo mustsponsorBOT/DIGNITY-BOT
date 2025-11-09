@@ -99,13 +99,16 @@ await regrasChannel.permissionOverwrites.edit(roleMembro, {
         .setStyle(ButtonStyle.Success)
     );
 
-    // Apaga mensagem antiga (se existir)
-    const messages = await regrasChannel.messages.fetch({ limit: 10 });
-    const existingMessage = messages.find(m => m.author.id === client.user.id);
-    if (existingMessage) await existingMessage.delete();
+    // Verifica se já existe uma mensagem do bot com o botão de verificação
+const messages = await regrasChannel.messages.fetch({ limit: 10 });
+const existingMessage = messages.find(m =>
+  m.author.id === client.user.id &&
+  m.components.length > 0 &&
+  m.components[0].components[0].data?.custom_id === "verify_button"
+);
 
-    // Conteúdo das regras
-    const regrasContent = `
+// Conteúdo das regras
+const regrasContent = `
 🎮 **REGRAS DO SERVIDOR**  
 1️⃣ Respeito acima de tudo! 
 Trata todos os membros com respeito. Nada de insultos, racismo, homofobia, ou qualquer tipo de discriminação.  
@@ -138,9 +141,13 @@ Durante jogos ou chats de voz, evita gritar, fazer ruído constante ou usar soun
 Interage, joga com a malta, partilha clips, memes e momentos do stream. O servidor é da comunidade — faz parte dela!
 `;
 
-    // Envia nova mensagem de regras com botão
-    await regrasChannel.send({ content: regrasContent, components: [row] });
-    console.log("📩 Mensagem de verificação com regras enviada em 📜・regras.");
+// Só envia nova mensagem se não existir ainda
+if (!existingMessage) {
+  await regrasChannel.send({ content: regrasContent, components: [row] });
+  console.log("📩 Mensagem de verificação com regras enviada em 📜・regras.");
+} else {
+  console.log("ℹ️ Mensagem de verificação já existente — não foi recriada.");
+}
 
     console.log("✅ Setup inicial completo!");
   } catch (err) {
@@ -283,4 +290,5 @@ app.get("/", (req, res) => {
 app.listen(PORT, () => {
   console.log(`🌐 Servidor web a correr na porta ${PORT}`);
 });
+
 
