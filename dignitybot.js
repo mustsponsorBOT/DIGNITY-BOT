@@ -1,3 +1,5 @@
+// dignitybot.js (versão consolidada e corrigida)
+
 const {
   Client,
   GatewayIntentBits,
@@ -38,7 +40,7 @@ client.once("ready", async () => {
   try {
     const guild = await client.guilds.fetch(SERVER_ID);
 
-    // ==== ROLES ====
+    // ==== ROLES (cria se não existir) ====
     const getOrCreateRole = async (name, color, reason) => {
       let role = guild.roles.cache.find(r => r.name === name);
       if (!role) {
@@ -57,167 +59,95 @@ client.once("ready", async () => {
 
     console.log("🎭 Todas as roles foram verificadas ou criadas.");
 
-    // ==== CANAL 📜・regras ====
-const regrasChannel = guild.channels.cache.find(c => c.name.includes("regras"));
-if (!regrasChannel) {
-  console.warn("⚠️ Canal 📜・regras não encontrado!");
-  return;
-}
+    // ==== CANAL DE REGRAS ====
+    const regrasChannel = guild.channels.cache.find(c => c.name.includes("regras"));
+    if (!regrasChannel) {
+      console.warn("⚠️ Canal 📜・regras não encontrado!");
+      return;
+    }
 
-// === PERMISSÕES DO CANAL REGRAS ===
-// Apenas visível (mas não escrevível) por todos, incluindo Desconhecido
-await regrasChannel.permissionOverwrites.edit(guild.roles.everyone, {
-  ViewChannel: false,
-  SendMessages: false,
-}).catch(()=>{});
+    // ==== PERMISSÕES POR CANAL ====
 
-await regrasChannel.permissionOverwrites.edit(roleDesconhecido, {
-  ViewChannel: true,
-  SendMessages: false,
-}).catch(()=>{});
+    // 1) Canal de regras: read-only, bot envia
+    await regrasChannel.permissionOverwrites.set([
+      { id: guild.roles.everyone.id, deny: ["ViewChannel", "SendMessages"] },
+      { id: roleDesconhecido.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+      { id: roleMembro.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+      { id: roleAdmin.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+      { id: roleMod.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+      { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
+    ]).catch(e => console.error("❌ Falha ao definir permissões de 📜・regras:", e));
 
-await regrasChannel.permissionOverwrites.edit(roleMembro, {
-  ViewChannel: true,
-  SendMessages: false,
-}).catch(()=>{});
+    // 2) Canais comunitários
+    const canaisComunitarios = ["📸・memes", "🎬・clips", "🔫・airsoft-market"];
+    for (const name of canaisComunitarios) {
+      const canal = guild.channels.cache.find(c => c.name === name);
+      if (!canal) continue;
+      await canal.permissionOverwrites.set([
+        { id: guild.roles.everyone.id, deny: ["ViewChannel", "SendMessages"] },
+        { id: roleDesconhecido.id, deny: ["ViewChannel", "SendMessages"] },
+        { id: roleMembro.id, allow: ["ViewChannel", "SendMessages"] },
+        { id: roleAdmin.id, allow: ["ViewChannel", "SendMessages"] },
+        { id: roleMod.id, allow: ["ViewChannel", "SendMessages"] },
+        { id: roleStreamer.id, allow: ["ViewChannel", "SendMessages"] },
+        { id: roleJoin.id, allow: ["ViewChannel", "SendMessages", "Connect", "Speak"] },
+        { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
+      ]).catch(e => console.error(`❌ Falha em ${name}:`, e));
+    }
 
-await regrasChannel.permissionOverwrites.edit(roleAdmin, {
-  ViewChannel: true,
-  SendMessages: false,
-}).catch(()=>{});
+    // 3) Canais admin-only
+    const canaisAdminOnly = ["📺・must-setup", "🖊️・registo", "🤝・parcerias"];
+    for (const name of canaisAdminOnly) {
+      const canal = guild.channels.cache.find(c => c.name === name);
+      if (!canal) continue;
+      await canal.permissionOverwrites.set([
+        { id: guild.roles.everyone.id, deny: ["ViewChannel", "SendMessages"] },
+        { id: roleDesconhecido.id, deny: ["ViewChannel", "SendMessages"] },
+        { id: roleAdmin.id, allow: ["ViewChannel", "SendMessages"] },
+        { id: roleMod.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+        { id: roleStreamer.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+        { id: roleMembro.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+        { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
+      ]).catch(e => console.error(`❌ Falha em ${name}:`, e));
+    }
 
-await regrasChannel.permissionOverwrites.edit(roleMod, {
-  ViewChannel: true,
-  SendMessages: false,
-}).catch(()=>{});
+    // 4) Outros canais
+    const skipNames = new Set(["regras", ...canaisComunitarios, ...canaisAdminOnly]);
+    guild.channels.cache.forEach(async channel => {
+      if (!channel || !channel.name) return;
+      if (skipNames.has(channel.name)) return;
+      await channel.permissionOverwrites.set([
+        { id: guild.roles.everyone.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+        { id: roleDesconhecido.id, deny: ["ViewChannel", "SendMessages", "Connect", "Speak"] },
+        { id: roleMembro.id, allow: ["ViewChannel", "SendMessages"] },
+        { id: roleMod.id, allow: ["ViewChannel", "SendMessages"] },
+        { id: roleAdmin.id, allow: ["ViewChannel", "SendMessages"] },
+        { id: roleStreamer.id, allow: ["ViewChannel", "SendMessages"] },
+        { id: roleJoin.id, allow: ["ViewChannel", "SendMessages", "Connect", "Speak"] },
+        { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
+      ]).catch(()=>{});
+    });
 
+    // ==== BOTÃO DE VERIFICAÇÃO ====
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("verify_button")
+        .setLabel("✅ Verificar Identidade")
+        .setStyle(ButtonStyle.Success)
+    );
 
-// ==== BLOQUEAR ACESSO DOS DESCONHECIDOS AOS OUTROS CANAIS ====
-guild.channels.cache.forEach(channel => {
-  if (channel.name !== "📜・regras") {
-    channel.permissionOverwrites.edit(roleDesconhecido, {
-      ViewChannel: false,
-      SendMessages: false,
-    }).catch(()=>{});
-  }
-});
+    // Verifica se já existe mensagem do bot
+    const messages = await regrasChannel.messages.fetch({ limit: 20 }).catch(()=>({}));
+    const existingMessage = messages && messages.find ? messages.find(m =>
+      m.author.id === client.user.id &&
+      m.components.length > 0 &&
+      ((m.components[0].components && m.components[0].components[0]?.customId) === "verify_button" ||
+        (m.components[0].components && m.components[0].components[0]?.data?.custom_id === "verify_button"))
+    ) : null;
 
-
-// ==== CATEGORIA COMUNIDADE DIGNITY ====
-const canaisComunitarios = ["📸・memes", "🎬・clips", "🔫・airsoft-market"];
-canaisComunitarios.forEach(name => {
-  const canal = guild.channels.cache.find(c => c.name === name);
-  if (!canal) return;
-
-  // Apenas os membros verificados e staff podem escrever
-  canal.permissionOverwrites.edit(roleMembro, {
-    ViewChannel: true,
-    SendMessages: true,
-  }).catch(()=>{});
-
-  canal.permissionOverwrites.edit(roleStreamer, {
-    ViewChannel: true,
-    SendMessages: true,
-  }).catch(()=>{});
-
-  canal.permissionOverwrites.edit(roleMod, {
-    ViewChannel: true,
-    SendMessages: true,
-  }).catch(()=>{});
-
-  canal.permissionOverwrites.edit(roleAdmin, {
-    ViewChannel: true,
-    SendMessages: true,
-  }).catch(()=>{});
-
-  // Desconhecidos não veem nem escrevem
-  canal.permissionOverwrites.edit(roleDesconhecido, {
-    ViewChannel: false,
-    SendMessages: false,
-  }).catch(()=>{});
-});
-
-
-// ==== SALAS EXCLUSIVAS DO ADMIN ====
-const canaisAdminOnly = ["📺・must-setup", "🖊️・registo", "🤝・parcerias"];
-canaisAdminOnly.forEach(name => {
-  const canal = guild.channels.cache.find(c => c.name === name);
-  if (!canal) return;
-
-  // Só Admin pode escrever
-  canal.permissionOverwrites.edit(roleAdmin, {
-    ViewChannel: true,
-    SendMessages: true,
-  }).catch(()=>{});
-
-  // Moderadores e outros só podem ver (não escrever)
-  [roleMod, roleStreamer, roleMembro].forEach(role => {
-    canal.permissionOverwrites.edit(role, {
-      ViewChannel: true,
-      SendMessages: false,
-    }).catch(()=>{});
-  });
-
-  // Desconhecidos não veem
-  canal.permissionOverwrites.edit(roleDesconhecido, {
-    ViewChannel: false,
-    SendMessages: false,
-  }).catch(()=>{});
-});
-
-
-// ==== OUTROS CANAIS ====
-guild.channels.cache.forEach(channel => {
-  // Ignora os que já tratámos
-  if (
-    channel.name.includes("regras") ||
-    canaisComunitarios.includes(channel.name) ||
-    canaisAdminOnly.includes(channel.name)
-  ) return;
-
-  // Por padrão, membros e staff podem ver e escrever
-  [roleMembro, roleMod, roleStreamer, roleAdmin].forEach(role => {
-    channel.permissionOverwrites.edit(role, {
-      ViewChannel: true,
-      SendMessages: true,
-    }).catch(()=>{});
-  });
-
-  // Desconhecidos não veem
-  channel.permissionOverwrites.edit(roleDesconhecido, {
-    ViewChannel: false,
-    SendMessages: false,
-  }).catch(()=>{});
-});
-
-
-// ==== BOTÃO DE VERIFICAÇÃO ====
-const row = new ActionRowBuilder().addComponents(
-  new ButtonBuilder()
-    .setCustomId("verify_button")
-    .setLabel("✅ Verificar Identidade")
-    .setStyle(ButtonStyle.Success)
-);
-
-// ==== Botão de verificação ====
-const row = new ActionRowBuilder().addComponents(
-  new ButtonBuilder()
-    .setCustomId("verify_button")
-    .setLabel("✅ Verificar Identidade")
-    .setStyle(ButtonStyle.Success)
-);
-
-    // Verifica se já existe uma mensagem do bot com o botão de verificação
-const messages = await regrasChannel.messages.fetch({ limit: 10 });
-const existingMessage = messages.find(m =>
-  m.author.id === client.user.id &&
-  m.components.length > 0 &&
-  m.components[0].components[0].data?.custom_id === "verify_button"
-);
-
-// Conteúdo das regras
-const regrasContent = `
+    const regrasContent = `
 🎮 **REGRAS DO SERVIDOR**  
+
 1️⃣ Respeito acima de tudo! 
 Trata todos os membros com respeito. Nada de insultos, racismo, homofobia, ou qualquer tipo de discriminação.  
 
@@ -245,17 +175,18 @@ Nada de nicks ofensivos, imitarem staff ou o streamer. Mantém algo legível e r
 9️⃣ Usa o micro com bom senso! 
 Durante jogos ou chats de voz, evita gritar, fazer ruído constante ou usar soundboards em excesso.  
 
-🔟 Diverte-te e participa! 
+1️⃣0️⃣ Diverte-te e participa! 
 Interage, joga com a malta, partilha clips, memes e momentos do stream. O servidor é da comunidade — faz parte dela!
+
+1️⃣1️⃣  Incoming  
+
+1️⃣2️⃣  Incoming  
 `;
 
-// Só envia nova mensagem se não existir ainda
-if (!existingMessage) {
-  await regrasChannel.send({ content: regrasContent, components: [row] });
-  console.log("📩 Mensagem de verificação com regras enviada em 📜・regras.");
-} else {
-  console.log("ℹ️ Mensagem de verificação já existente — não foi recriada.");
-}
+    if (!existingMessage) {
+      await regrasChannel.send({ content: regrasContent, components: [row] });
+      console.log("📩 Mensagem de verificação enviada.");
+    } else console.log("ℹ️ Mensagem de verificação já existe.");
 
     console.log("✅ Setup inicial completo!");
   } catch (err) {
@@ -264,26 +195,21 @@ if (!existingMessage) {
 });
 
 // ===============================
-// 🔹 NOVO MEMBRO ENTRA NO SERVIDOR
+// 🔹 NOVO MEMBRO ENTRA
 // ===============================
 client.on(Events.GuildMemberAdd, async member => {
   try {
     const guild = member.guild;
     const roleDesconhecido = guild.roles.cache.find(r => r.name === "Desconhecido");
-
-    if (roleDesconhecido) {
-      await member.roles.add(roleDesconhecido);
-      console.log(`👋 Novo utilizador ${member.user.tag} recebeu o cargo 'Desconhecido'.`);
-    } else {
-      console.warn("⚠️ Cargo 'Desconhecido' não encontrado!");
-    }
+    if (roleDesconhecido) await member.roles.add(roleDesconhecido);
+    console.log(`👋 ${member.user.tag} recebeu 'Desconhecido'.`);
   } catch (err) {
-    console.error("❌ Erro ao atribuir cargo 'Desconhecido' ao novo membro:", err);
+    console.error("❌ Erro ao adicionar 'Desconhecido':", err);
   }
 });
 
 // ===============================
-// 🔹 INTERAÇÃO COM BOTÃO (CORRIGIDA)
+// 🔹 INTERAÇÃO COM BOTÃO
 // ===============================
 client.on(Events.InteractionCreate, async interaction => {
   if (!interaction.isButton()) return;
@@ -296,66 +222,20 @@ client.on(Events.InteractionCreate, async interaction => {
     const roleMembro = guild.roles.cache.find(r => r.name === "Membro da Comunidade");
 
     if (!roleDesconhecido || !roleMembro) {
-      return await interaction.reply({
-        content: "⚠️ Os cargos necessários não foram encontrados.",
-        ephemeral: true,
-      });
+      return await interaction.reply({ content: "⚠️ Cargos não encontrados.", ephemeral: true });
     }
 
-    // Atualiza imediatamente o botão para evitar "This interaction failed"
-    await interaction.reply({
-      content: "⏳ A verificar a tua identidade...",
-      ephemeral: true,
-    });
+    await interaction.reply({ content: "⏳ A verificar...", ephemeral: true });
 
-    // Remove o cargo Desconhecido e adiciona o de Membro
-    await member.roles.remove(roleDesconhecido).catch(() => {});
-    await member.roles.add(roleMembro).catch(() => {});
+    const beforeRoles = member.roles.cache.map(r => r.name);
+    await member.roles.remove(roleDesconhecido).catch(()=>{});
+    await member.roles.add(roleMembro).catch(()=>{});
+    await interaction.editReply({ content: "✅ Verificado!" }).catch(()=>{});
 
-    // Edita a resposta após concluir a verificação
-    await interaction.editReply({
-      content: "✅ Verificação concluída! Bem-vindo à comunidade Dignity!",
-    });
-
-    // LOG DETALHADO DE VERIFICAÇÃO
-console.log("🧾 LOG DE VERIFICAÇÃO:");
-console.log(`➡️ Utilizador: ${member.user.tag} (${member.id})`);
-console.log(`➡️ Roles antes: ${member.roles.cache.map(r => r.name).join(", ")}`);
-console.log("➡️ A remover role 'Desconhecido' e adicionar 'Membro da Comunidade'...");
-
-if (!roleDesconhecido) console.warn("⚠️ Role 'Desconhecido' não encontrada.");
-if (!roleMembro) console.warn("⚠️ Role 'Membro da Comunidade' não encontrada.");
-
-console.log("✅ Roles aplicadas com sucesso!");
-
-    // DM opcional
-    member.send(
-      `✅ Foste verificado com sucesso em **${guild.name}**! Bem-vindo à comunidade Dignity!`
-    ).catch(() => console.log("⚠️ Não consegui enviar DM ao utilizador."));
-
-    // Canal de registo (opcional)
-    const registoChannel = guild.channels.cache.find(c => c.name.includes("registo"));
-    if (registoChannel) {
-      const embed = new EmbedBuilder()
-        .setColor("Green")
-        .setTitle("🎉 Novo membro verificado!")
-        .setDescription(`Bem-vindo ${interaction.user} à comunidade Dignity Esports!`)
-        .setThumbnail(interaction.user.displayAvatarURL())
-        .setTimestamp();
-      await registoChannel.send({ embeds: [embed] });
-    }
-
-    console.log(`✅ ${member.user.tag} verificado e recebeu 'Membro da Comunidade'.`);
+    console.log(`🧾 ${member.user.tag}: roles antes: ${beforeRoles.join(", ")} | agora: ${member.roles.cache.map(r=>r.name).join(", ")}`);
   } catch (err) {
-    console.error("❌ Erro ao processar botão:", err);
-    try {
-      await interaction.followUp({
-        content: "❌ Ocorreu um erro ao verificar. Tenta novamente.",
-        ephemeral: true,
-      });
-    } catch (e) {
-      console.warn("⚠️ Não foi possível enviar resposta de erro.");
-    }
+    console.error("❌ Botão falhou:", err);
+    try { await interaction.followUp({ content: "❌ Erro ao verificar.", ephemeral: true }); } catch(e){};
   }
 });
 
@@ -370,7 +250,7 @@ client.on("messageCreate", async message => {
 
   if (message.channel.id !== commandChannel.id && message.content.startsWith(PREFIX)) {
     await message.delete().catch(()=>{});
-    await message.author.send(`⚠️ Usa o canal <#${commandChannel.id}> para comandos, por favor!`);
+    await message.author.send(`⚠️ Usa <#${commandChannel.id}> para comandos.`);
     return;
   }
 
@@ -395,21 +275,19 @@ client.on("messageCreate", async message => {
       const hours = Math.floor((diff % 86400000) / 3600000);
       const minutes = Math.floor((diff % 3600000) / 60000);
       const joinedStr = moment(joinedAt).format("DD/MM/YYYY HH:mm");
-      await message.author.send(`🕒 Primeiro dia no servidor: ${joinedStr}\n⏱️ Tempo desde então: ${days} dias, ${hours} horas e ${minutes} minutos.`);
+      await message.author.send(`🕒 Primeiro dia: ${joinedStr}\n⏱️ Tempo: ${days}d ${hours}h ${minutes}m`);
       break;
-    case "donate": await message.author.send("💰 As doações estão atualmente em atualização."); break;
+    case "donate": await message.author.send("💰 Doações em atualização."); break;
     case "twitch": await message.author.send("🎥 Twitch: https://www.twitch.tv/mustt_tv"); break;
     case "tiktok": await message.author.send("🎬 TikTok: https://www.tiktok.com/@must_savage"); break;
     case "youtube": await message.author.send("📺 YouTube: https://www.youtube.com/@Mustyzord"); break;
     case "instagram": await message.author.send("📸 Instagram: https://www.instagram.com/must_savage"); break;
-    case "telegram": await message.author.send("✉️ Telegram: https://t.me/+qKBbJZ-RQ5FlNTE0"); break;
-    default: await message.author.send("❓ Comando desconhecido. Usa apenas comandos válidos no canal #comandos.");
+    case "telegram": await message.author.send("✉️ Telegram: https://t.me/+qKBbZ-RQ5FlNTE0"); break;
+    default: await message.author.send("❓ Comando desconhecido.");
   }
 
-  console.log(`💬 ${message.author.tag} usou o comando: ${command}`);
+  console.log(`💬 ${message.author.tag} usou: ${command}`);
 });
-
-client.login(BOT_TOKEN);
 
 // ===============================
 // 🔹 MINI SERVIDOR HTTP PARA RENDER
@@ -417,18 +295,7 @@ client.login(BOT_TOKEN);
 const express = require("express");
 const app = express();
 const PORT = process.env.PORT || 3000;
+app.get("/", (req, res) => res.send("Bot Discord online! ✅"));
+app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 
-app.get("/", (req, res) => {
-  res.send("Bot Discord online! ✅");
-});
-
-app.listen(PORT, () => {
-  console.log(`🌐 Servidor web a correr na porta ${PORT}`);
-});
-
-
-
-
-
-
-
+client.login(BOT_TOKEN);
