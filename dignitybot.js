@@ -66,6 +66,36 @@ client.once("ready", async () => {
       return;
     }
 
+    // ==== BOTÃO DE VERIFICAÇÃO (apenas UMA declaração) ====
+const row = new ActionRowBuilder().addComponents(
+  new ButtonBuilder()
+    .setCustomId("verify_button")
+    .setLabel("✅ Verificar Identidade")
+    .setStyle(ButtonStyle.Success)
+);
+
+// Busca se já existe uma mensagem com o botão
+const messages = await regrasChannel.messages.fetch({ limit: 20 }).catch(() => ({}));
+const existingMessage = messages && messages.find ? messages.find(m =>
+  m.author.id === client.user.id &&
+  m.components.length > 0 &&
+  ((m.components[0].components && m.components[0].components[0]?.customId) === "verify_button" ||
+   (m.components[0].components && m.components[0].components[0]?.data?.custom_id === "verify_button"))
+) : null;
+
+// Conteúdo das regras
+const regrasContent = `
+🎮 **REGRAS DO SERVIDOR**  
+1️⃣ Respeito acima de tudo! 
+...
+`;
+if (!existingMessage) {
+  await regrasChannel.send({ content: regrasContent, components: [row] });
+  console.log("📩 Mensagem de verificação com regras enviada em 📜・regras.");
+} else {
+  console.log("ℹ️ Mensagem de verificação já existente — não foi recriada.");
+}
+
     // === PERMISSÕES ===
     // 1) 📜・regras: visível apenas para Desconhecido, membros e staff
     await regrasChannel.permissionOverwrites.set([
@@ -313,6 +343,7 @@ app.get("/", (req, res) => res.send("Bot Discord online! ✅"));
 app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 
 client.login(BOT_TOKEN);
+
 
 
 
