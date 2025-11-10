@@ -122,6 +122,10 @@ Durante jogos ou chats de voz, evita gritar, fazer ruído constante ou usar soun
 🔟 Diverte-te e participa! 
 Interage, joga com a malta, partilha clips, memes e momentos do stream. O servidor é da comunidade — faz parte dela!
 
+1️⃣1️⃣ INCOMING
+
+1️⃣2️⃣ INCOMING
+
 `;
 
       if (!existingMessage) {
@@ -292,6 +296,7 @@ app.get("/", (req, res) => res.send("Bot Discord online! ✅"));
 app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 
 client.login(BOT_TOKEN);
+
 
 
 
