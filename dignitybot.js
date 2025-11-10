@@ -59,74 +59,73 @@ client.once("ready", async () => {
 
     console.log("🎭 Todas as roles foram verificadas ou criadas.");
 
-    // ==== CANAL DE REGRAS ====
+    // ==== CANAL 📜・regras ====
     const regrasChannel = guild.channels.cache.find(c => c.name.includes("regras"));
     if (!regrasChannel) {
       console.warn("⚠️ Canal 📜・regras não encontrado!");
       return;
     }
 
-    // ==== PERMISSÕES POR CANAL ====
-
-    // 1) Canal de regras: read-only, bot envia
+    // === PERMISSÕES ===
+    // 1) 📜・regras: visível apenas para Desconhecido, membros e staff
     await regrasChannel.permissionOverwrites.set([
       { id: guild.roles.everyone.id, deny: ["ViewChannel", "SendMessages"] },
       { id: roleDesconhecido.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
-      { id: roleMembro.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
-      { id: roleAdmin.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
-      { id: roleMod.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+      { id: roleMembro.id, allow: ["ViewChannel", "SendMessages"] },
+      { id: roleAdmin.id, allow: ["ViewChannel", "SendMessages"] },
+      { id: roleMod.id, allow: ["ViewChannel", "SendMessages"] },
       { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
-    ]).catch(e => console.error("❌ Falha ao definir permissões de 📜・regras:", e));
+    ]);
+    console.log("🔐 Permissões aplicadas: 📜・regras");
 
-    // 2) Canais comunitários
+    // 2) Canais comunitários: 📸・memes, 🎬・clips, 🔫・airsoft-market
+    // Novos membros NÃO veem, apenas após verificação
     const canaisComunitarios = ["📸・memes", "🎬・clips", "🔫・airsoft-market"];
     for (const name of canaisComunitarios) {
       const canal = guild.channels.cache.find(c => c.name === name);
       if (!canal) continue;
-      await canal.permissionOverwrites.set([
-        { id: guild.roles.everyone.id, deny: ["ViewChannel", "SendMessages"] },
-        { id: roleDesconhecido.id, deny: ["ViewChannel", "SendMessages"] },
-        { id: roleMembro.id, allow: ["ViewChannel", "SendMessages"] },
-        { id: roleAdmin.id, allow: ["ViewChannel", "SendMessages"] },
-        { id: roleMod.id, allow: ["ViewChannel", "SendMessages"] },
-        { id: roleStreamer.id, allow: ["ViewChannel", "SendMessages"] },
-        { id: roleJoin.id, allow: ["ViewChannel", "SendMessages", "Connect", "Speak"] },
-        { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
-      ]).catch(e => console.error(`❌ Falha em ${name}:`, e));
+      try {
+        await canal.permissionOverwrites.set([
+          { id: guild.roles.everyone.id, deny: ["SendMessages"] }, // todos podem ver, não enviar
+          { id: roleMembro.id, allow: ["ViewChannel", "SendMessages"] }, // membros após verificação
+          { id: roleAdmin.id, allow: ["ViewChannel", "SendMessages"] },
+          { id: roleMod.id, allow: ["ViewChannel", "SendMessages"] },
+          { id: roleStreamer.id, allow: ["ViewChannel", "SendMessages"] },
+          { id: roleJoin.id, allow: ["ViewChannel", "SendMessages", "Connect", "Speak"] },
+          { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
+        ]);
+        console.log(`🔐 Permissões aplicadas: ${name}`);
+      } catch (e) {
+        console.error(`❌ Falha ao definir permissões para ${name}:`, e);
+      }
     }
 
-    // 3) Canais admin-only
+    // 3) Canais Admin-only: 📺・must-setup, 🤝・parcerias
     const canaisAdminOnly = ["📺・must-setup", "🖊️・registo", "🤝・parcerias"];
     for (const name of canaisAdminOnly) {
       const canal = guild.channels.cache.find(c => c.name === name);
       if (!canal) continue;
-      await canal.permissionOverwrites.set([
-        { id: guild.roles.everyone.id, deny: ["ViewChannel", "SendMessages"] },
-        { id: roleDesconhecido.id, deny: ["ViewChannel", "SendMessages"] },
-        { id: roleAdmin.id, allow: ["ViewChannel", "SendMessages"] },
-        { id: roleMod.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
-        { id: roleStreamer.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
-        { id: roleMembro.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
-        { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
-      ]).catch(e => console.error(`❌ Falha em ${name}:`, e));
+      try {
+        await canal.permissionOverwrites.set([
+          { id: guild.roles.everyone.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+          { id: roleDesconhecido.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+          { id: roleMembro.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+          { id: roleAdmin.id, allow: ["ViewChannel", "SendMessages"] },
+          { id: roleMod.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+          { id: roleStreamer.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+          { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
+        ]);
+        console.log(`🔐 Permissões aplicadas (admin-only): ${name}`);
+      } catch (e) {
+        console.error(`❌ Falha ao definir permissões para ${name}:`, e);
+      }
     }
 
-    // 4) Outros canais
-    const skipNames = new Set(["regras", ...canaisComunitarios, ...canaisAdminOnly]);
-    guild.channels.cache.forEach(async channel => {
-      if (!channel || !channel.name) return;
-      if (skipNames.has(channel.name)) return;
-      await channel.permissionOverwrites.set([
-        { id: guild.roles.everyone.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
-        { id: roleDesconhecido.id, deny: ["ViewChannel", "SendMessages", "Connect", "Speak"] },
-        { id: roleMembro.id, allow: ["ViewChannel", "SendMessages"] },
-        { id: roleMod.id, allow: ["ViewChannel", "SendMessages"] },
-        { id: roleAdmin.id, allow: ["ViewChannel", "SendMessages"] },
-        { id: roleStreamer.id, allow: ["ViewChannel", "SendMessages"] },
-        { id: roleJoin.id, allow: ["ViewChannel", "SendMessages", "Connect", "Speak"] },
-        { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
-      ]).catch(()=>{});
-    });
+    console.log("✅ Setup inicial de roles e permissões completo!");
+  } catch (err) {
+    console.error("❌ Erro no setup inicial:", err);
+  }
+});
 
     // ==== BOTÃO DE VERIFICAÇÃO ====
     const row = new ActionRowBuilder().addComponents(
@@ -314,6 +313,7 @@ app.get("/", (req, res) => res.send("Bot Discord online! ✅"));
 app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 
 client.login(BOT_TOKEN);
+
 
 
 
