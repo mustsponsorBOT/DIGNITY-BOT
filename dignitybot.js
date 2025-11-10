@@ -286,7 +286,9 @@ client.on("messageCreate", async message => {
     default: await message.author.send("❓ Comando desconhecido.");
   }
 
-  console.log(`💬 ${message.author.tag} usou: ${command}`);
+  // Apaga a mensagem do canal após enviar DM
+  await message.delete().catch(()=>{});
+  console.log(`💬 ${message.author.tag} usou: ${command} (mensagem apagada)`);
 });
 
 // ===============================
@@ -299,3 +301,4 @@ app.get("/", (req, res) => res.send("Bot Discord online! ✅"));
 app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 
 client.login(BOT_TOKEN);
+
