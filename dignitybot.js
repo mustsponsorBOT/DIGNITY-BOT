@@ -55,13 +55,15 @@ client.once("ready", async () => {
     const roleStreamer = await getOrCreateRole("STREAMER", "Green", "Setup inicial");
     const roleMembro = await getOrCreateRole("Membro da Comunidade", "Grey", "Setup inicial");
     const roleDesconhecido = await getOrCreateRole("Desconhecido", "DarkGrey", "Setup inicial");
+    const roleJoin = await getOrCreateRole("Join", "Orange", "Acesso total");
 
     console.log("🎭 Todas as roles foram verificadas ou criadas.");
 
-    // ==== CANAL 📜・regras ====
+    // ===============================
+    // 📜・regras (apenas leitura para Desconhecido, bot envia)
+    // ===============================
     const regrasChannel = guild.channels.cache.find(c => c.name.includes("regras"));
     if (regrasChannel) {
-      // Permissões: apenas leitura para Desconhecido, ninguém envia mensagem, bot pode enviar
       await regrasChannel.permissionOverwrites.set([
         { id: guild.roles.everyone.id, deny: ["ViewChannel", "SendMessages"] },
         { id: roleDesconhecido.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
@@ -73,7 +75,7 @@ client.once("ready", async () => {
       ]);
       console.log("🔐 Permissões aplicadas: 📜・regras");
 
-      // Mensagem com botão de verificação
+      // Botão de verificação
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId("verify_button")
@@ -125,18 +127,17 @@ Interage, joga com a malta, partilha clips, memes e momentos do stream. O servid
 1️⃣1️⃣ INCOMING
 
 1️⃣2️⃣ INCOMING
-
 `;
 
       if (!existingMessage) {
         await regrasChannel.send({ content: regrasContent, components: [row] });
         console.log("📩 Mensagem de verificação enviada em 📜・regras");
-      } else {
-        console.log("ℹ️ Mensagem de verificação já existente");
-      }
-    } else console.warn("⚠️ Canal 📜・regras não encontrado!");
+      } else console.log("ℹ️ Mensagem de verificação já existe");
+    }
 
-    // ==== CANAIS COMUNITÁRIOS ====
+    // ===============================
+    // Canais comunitários (todos podem ler/escrever exceto Desconhecido)
+    // ===============================
     const canaisComunitarios = ["📸・memes", "🎬・clips", "🔫・airsoft-market"];
     for (const name of canaisComunitarios) {
       const canal = guild.channels.cache.find(c => c.name === name);
@@ -153,7 +154,9 @@ Interage, joga com a malta, partilha clips, memes e momentos do stream. O servid
       console.log(`🔐 Permissões aplicadas: ${name}`);
     }
 
-    // ==== CANAIS ADMIN-ONLY ====
+    // ===============================
+    // Canais Admin-only (somente Admin escreve, resto vê, Desconhecido não vê)
+    // ===============================
     const canaisAdminOnly = ["📺・must-setup", "🖊️・registo", "🤝・parcerias"];
     for (const name of canaisAdminOnly) {
       const canal = guild.channels.cache.find(c => c.name === name);
@@ -165,9 +168,27 @@ Interage, joga com a malta, partilha clips, memes e momentos do stream. O servid
         { id: roleAdmin.id, allow: ["ViewChannel", "SendMessages"] },
         { id: roleMod.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
         { id: roleStreamer.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+        { id: roleJoin.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
         { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
       ]);
       console.log(`🔐 Permissões aplicadas (admin-only): ${name}`);
+    }
+
+    // ===============================
+    // Categoria 🔒・Admin / Moderador → visível apenas para Admin, Mod, STREAMER, Join
+    // ===============================
+    const categoriaAdmin = guild.channels.cache.find(c => c.name.includes("Admin / Moderador") && c.type === 4); // 4 = Category
+    if (categoriaAdmin) {
+      await categoriaAdmin.permissionOverwrites.set([
+        { id: guild.roles.everyone.id, deny: ["ViewChannel"] },
+        { id: roleDesconhecido.id, deny: ["ViewChannel"] },
+        { id: roleMembro.id, deny: ["ViewChannel"] },
+        { id: roleAdmin.id, allow: ["ViewChannel"] },
+        { id: roleMod.id, allow: ["ViewChannel"] },
+        { id: roleStreamer.id, allow: ["ViewChannel"] },
+        { id: roleJoin.id, allow: ["ViewChannel"] },
+      ]);
+      console.log("🔐 Permissões aplicadas na categoria 🔒・Admin / Moderador");
     }
 
     console.log("✅ Setup inicial de roles e permissões completo!");
@@ -296,6 +317,7 @@ app.get("/", (req, res) => res.send("Bot Discord online! ✅"));
 app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 
 client.login(BOT_TOKEN);
+
 
 
 
