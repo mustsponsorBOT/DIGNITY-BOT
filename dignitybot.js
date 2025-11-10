@@ -246,21 +246,28 @@ client.on("messageCreate", async message => {
   if (message.author.bot) return;
 
   const commandChannel = message.guild.channels.cache.find(c => c.name.includes("comandos"));
-  if (!commandChannel) return;
+  const canaisComunitarios = ["📸・memes", "🎬・clips", "🔫・airsoft-market"];
 
-  if (message.channel.id !== commandChannel.id && message.content.startsWith(PREFIX)) {
+  // Se a mensagem for um comando fora da sala de comandos
+  if (message.content.startsWith(PREFIX) && message.channel.id !== commandChannel.id) {
     await message.delete().catch(()=>{});
-    await message.author.send(`⚠️ Usa <#${commandChannel.id}> para comandos.`);
+    await message.author.send(`${message.author}, por favor utiliza a sala ‼️・comandos para o efeito, assim que enviares um comando nessa sala receberás a resposta por mensagem privada. Obrigada!`);
     return;
   }
 
+  // Bloquear mensagens não-comando em canais da categoria COMUNIDADE DIGNITY (opcional, se já quiser)
   const comunidadeCategory = message.guild.channels.cache.find(c => c.name.includes("COMUNIDADE DIGNITY") && c.type === 4);
   if (comunidadeCategory && message.channel.parentId === comunidadeCategory.id && !message.content.startsWith(PREFIX)) {
     await message.delete().catch(()=>{});
     return;
   }
 
+  // Se não for comando, ignora
   if (!message.content.startsWith(PREFIX)) return;
+
+  // Apenas processar comandos da sala de comandos
+  if (message.channel.id !== commandChannel.id) return;
+
   const args = message.content.slice(PREFIX.length).trim().split(/ +/);
   const command = args.shift().toLowerCase();
 
@@ -301,4 +308,5 @@ app.get("/", (req, res) => res.send("Bot Discord online! ✅"));
 app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 
 client.login(BOT_TOKEN);
+
 
