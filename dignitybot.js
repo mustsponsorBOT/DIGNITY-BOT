@@ -36,11 +36,10 @@ const client = new Client({
 // ===============================
 client.once("ready", async () => {
   console.log(`✅ Bot online como ${client.user.tag}`);
-
   try {
     const guild = await client.guilds.fetch(SERVER_ID);
 
-    // ==== ROLES (cria se não existir) ====
+    // === ROLES ===
     const getOrCreateRole = async (name, color, reason) => {
       let role = guild.roles.cache.find(r => r.name === name);
       if (!role) {
@@ -49,7 +48,6 @@ client.once("ready", async () => {
       }
       return role;
     };
-
     const roleAdmin = await getOrCreateRole("Admin", "Red", "Setup inicial");
     const roleMod = await getOrCreateRole("Moderador", "Blue", "Setup inicial");
     const roleStreamer = await getOrCreateRole("STREAMER", "Green", "Setup inicial");
@@ -68,7 +66,7 @@ client.once("ready", async () => {
         { id: guild.roles.everyone.id, deny: ["ViewChannel", "SendMessages"] },
         { id: roleDesconhecido.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
         { id: roleMembro.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
-        { id: roleAdmin.id, allow: ["ViewChannel", "SendMessages"] },
+        { id: roleAdmin.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
         { id: roleMod.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
         { id: roleStreamer.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
         { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
@@ -198,6 +196,18 @@ Interage, joga com a malta, partilha clips, memes e momentos do stream. O servid
 });
 
 // ===============================
+// 🔹 DELEÇÃO DE MENSAGENS NÃO-COMANDO
+// ===============================
+client.on("messageCreate", async message => {
+  if (message.author.bot) return; // ignora mensagens do bot
+
+  // Sala de comandos: deleta mensagens que não começam com "!"
+  if (message.channel.name === "‼️・comandos" && !message.content.startsWith("!")) {
+    await message.delete().catch(() => {});
+  }
+});
+
+// ===============================
 // 🔹 NOVO MEMBRO ENTRA
 // ===============================
 client.on(Events.GuildMemberAdd, async member => {
@@ -317,6 +327,7 @@ app.get("/", (req, res) => res.send("Bot Discord online! ✅"));
 app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 
 client.login(BOT_TOKEN);
+
 
 
 
