@@ -55,37 +55,43 @@ client.once("ready", async () => {
     const roleStreamer = await getOrCreateRole("STREAMER", "Green", "Setup inicial");
     const roleMembro = await getOrCreateRole("Membro da Comunidade", "Grey", "Setup inicial");
     const roleDesconhecido = await getOrCreateRole("Desconhecido", "DarkGrey", "Setup inicial");
-    const roleJoin = await getOrCreateRole("Join", "Orange", "Acesso total");
 
     console.log("🎭 Todas as roles foram verificadas ou criadas.");
 
     // ==== CANAL 📜・regras ====
     const regrasChannel = guild.channels.cache.find(c => c.name.includes("regras"));
-    if (!regrasChannel) {
-      console.warn("⚠️ Canal 📜・regras não encontrado!");
-      return;
-    }
+    if (regrasChannel) {
+      // Permissões: apenas leitura para Desconhecido, ninguém envia mensagem, bot pode enviar
+      await regrasChannel.permissionOverwrites.set([
+        { id: guild.roles.everyone.id, deny: ["ViewChannel", "SendMessages"] },
+        { id: roleDesconhecido.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+        { id: roleMembro.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+        { id: roleAdmin.id, allow: ["ViewChannel", "SendMessages"] },
+        { id: roleMod.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+        { id: roleStreamer.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+        { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
+      ]);
+      console.log("🔐 Permissões aplicadas: 📜・regras");
 
-    // ==== BOTÃO DE VERIFICAÇÃO (apenas UMA declaração) ====
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId("verify_button")
-        .setLabel("✅ Verificar Identidade")
-        .setStyle(ButtonStyle.Success)
-    );
+      // Mensagem com botão de verificação
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId("verify_button")
+          .setLabel("✅ Verificar Identidade")
+          .setStyle(ButtonStyle.Success)
+      );
 
-    // Busca se já existe uma mensagem com o botão
-    const messages = await regrasChannel.messages.fetch({ limit: 20 }).catch(() => ({}));
-    const existingMessage = messages && messages.find ? messages.find(m =>
-      m.author.id === client.user.id &&
-      m.components.length > 0 &&
-      ((m.components[0].components && m.components[0].components[0]?.customId) === "verify_button" ||
-       (m.components[0].components && m.components[0].components[0]?.data?.custom_id === "verify_button"))
-    ) : null;
+      const messages = await regrasChannel.messages.fetch({ limit: 20 }).catch(() => new Map());
+      const existingMessage = messages.find(m =>
+        m.author.id === client.user.id &&
+        m.components.length > 0 &&
+        ((m.components[0].components?.[0]?.customId === "verify_button") ||
+          (m.components[0].components?.[0]?.data?.custom_id === "verify_button"))
+      );
 
-    // Conteúdo das regras
-    const regrasContent = `
+      const regrasContent = `
 🎮 **REGRAS DO SERVIDOR**  
+
 1️⃣ Respeito acima de tudo! 
 Trata todos os membros com respeito. Nada de insultos, racismo, homofobia, ou qualquer tipo de discriminação.  
 
@@ -113,76 +119,51 @@ Nada de nicks ofensivos, imitarem staff ou o streamer. Mantém algo legível e r
 9️⃣ Usa o micro com bom senso! 
 Durante jogos ou chats de voz, evita gritar, fazer ruído constante ou usar soundboards em excesso.  
 
-1️⃣0️⃣ Diverte-te e participa! 
+🔟 Diverte-te e participa! 
 Interage, joga com a malta, partilha clips, memes e momentos do stream. O servidor é da comunidade — faz parte dela!
 
-1️⃣1️⃣  Incoming  
-
-1️⃣2️⃣  Incoming  
 `;
 
-    if (!existingMessage) {
-      await regrasChannel.send({ content: regrasContent, components: [row] });
-      console.log("📩 Mensagem de verificação com regras enviada em 📜・regras.");
-    } else {
-      console.log("ℹ️ Mensagem de verificação já existente — não foi recriada.");
-    }
+      if (!existingMessage) {
+        await regrasChannel.send({ content: regrasContent, components: [row] });
+        console.log("📩 Mensagem de verificação enviada em 📜・regras");
+      } else {
+        console.log("ℹ️ Mensagem de verificação já existente");
+      }
+    } else console.warn("⚠️ Canal 📜・regras não encontrado!");
 
-    // ===============================
-    // 🔐 PERMISSÕES
-    // ===============================
-
-    // 1) 📜・regras: visível apenas para Desconhecido, membros e staff
-    await regrasChannel.permissionOverwrites.set([
-      { id: guild.roles.everyone.id, deny: ["ViewChannel", "SendMessages"] },
-      { id: roleDesconhecido.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
-      { id: roleMembro.id, allow: ["ViewChannel", "SendMessages"] },
-      { id: roleAdmin.id, allow: ["ViewChannel", "SendMessages"] },
-      { id: roleMod.id, allow: ["ViewChannel", "SendMessages"] },
-      { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
-    ]);
-    console.log("🔐 Permissões aplicadas: 📜・regras");
-
-    // 2) Canais comunitários
+    // ==== CANAIS COMUNITÁRIOS ====
     const canaisComunitarios = ["📸・memes", "🎬・clips", "🔫・airsoft-market"];
     for (const name of canaisComunitarios) {
       const canal = guild.channels.cache.find(c => c.name === name);
       if (!canal) continue;
-      try {
-        await canal.permissionOverwrites.set([
-          { id: guild.roles.everyone.id, deny: ["SendMessages"] },
-          { id: roleMembro.id, allow: ["ViewChannel", "SendMessages"] },
-          { id: roleAdmin.id, allow: ["ViewChannel", "SendMessages"] },
-          { id: roleMod.id, allow: ["ViewChannel", "SendMessages"] },
-          { id: roleStreamer.id, allow: ["ViewChannel", "SendMessages"] },
-          { id: roleJoin.id, allow: ["ViewChannel", "SendMessages", "Connect", "Speak"] },
-          { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
-        ]);
-        console.log(`🔐 Permissões aplicadas: ${name}`);
-      } catch (e) {
-        console.error(`❌ Falha ao definir permissões para ${name}:`, e);
-      }
+      await canal.permissionOverwrites.set([
+        { id: guild.roles.everyone.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+        { id: roleDesconhecido.id, deny: ["ViewChannel", "SendMessages"] },
+        { id: roleMembro.id, allow: ["ViewChannel", "SendMessages"] },
+        { id: roleAdmin.id, allow: ["ViewChannel", "SendMessages"] },
+        { id: roleMod.id, allow: ["ViewChannel", "SendMessages"] },
+        { id: roleStreamer.id, allow: ["ViewChannel", "SendMessages"] },
+        { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
+      ]);
+      console.log(`🔐 Permissões aplicadas: ${name}`);
     }
 
-    // 3) Canais Admin-only
+    // ==== CANAIS ADMIN-ONLY ====
     const canaisAdminOnly = ["📺・must-setup", "🖊️・registo", "🤝・parcerias"];
     for (const name of canaisAdminOnly) {
       const canal = guild.channels.cache.find(c => c.name === name);
       if (!canal) continue;
-      try {
-        await canal.permissionOverwrites.set([
-          { id: guild.roles.everyone.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
-          { id: roleDesconhecido.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
-          { id: roleMembro.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
-          { id: roleAdmin.id, allow: ["ViewChannel", "SendMessages"] },
-          { id: roleMod.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
-          { id: roleStreamer.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
-          { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
-        ]);
-        console.log(`🔐 Permissões aplicadas (admin-only): ${name}`);
-      } catch (e) {
-        console.error(`❌ Falha ao definir permissões para ${name}:`, e);
-      }
+      await canal.permissionOverwrites.set([
+        { id: guild.roles.everyone.id, deny: ["ViewChannel", "SendMessages"] },
+        { id: roleDesconhecido.id, deny: ["ViewChannel", "SendMessages"] },
+        { id: roleMembro.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+        { id: roleAdmin.id, allow: ["ViewChannel", "SendMessages"] },
+        { id: roleMod.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+        { id: roleStreamer.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+        { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
+      ]);
+      console.log(`🔐 Permissões aplicadas (admin-only): ${name}`);
     }
 
     console.log("✅ Setup inicial de roles e permissões completo!");
@@ -311,6 +292,7 @@ app.get("/", (req, res) => res.send("Bot Discord online! ✅"));
 app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 
 client.login(BOT_TOKEN);
+
 
 
 
