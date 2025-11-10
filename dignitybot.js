@@ -247,26 +247,32 @@ client.on("messageCreate", async message => {
 
   const commandChannel = message.guild.channels.cache.find(c => c.name.includes("comandos"));
   const canaisComunitarios = ["📸・memes", "🎬・clips", "🔫・airsoft-market"];
+  const canaisAdminOnly = ["📺・must-setup", "🤝・parcerias"];
 
-  // Se a mensagem for um comando fora da sala de comandos
+  // SE COMANDO FOR ENVIADO FORA DO CANAL DE COMANDOS
   if (message.content.startsWith(PREFIX) && message.channel.id !== commandChannel.id) {
     await message.delete().catch(()=>{});
     await message.author.send(`${message.author}, por favor utiliza a sala ‼️・comandos para o efeito, assim que enviares um comando nessa sala receberás a resposta por mensagem privada. Obrigada!`);
     return;
   }
 
-  // Bloquear mensagens não-comando em canais da categoria COMUNIDADE DIGNITY (opcional, se já quiser)
-  const comunidadeCategory = message.guild.channels.cache.find(c => c.name.includes("COMUNIDADE DIGNITY") && c.type === 4);
-  if (comunidadeCategory && message.channel.parentId === comunidadeCategory.id && !message.content.startsWith(PREFIX)) {
-    await message.delete().catch(()=>{});
-    return;
+  // BLOQUEIO PARA CANAIS ADMIN-ONLY (apenas Admin pode escrever)
+  if (canaisAdminOnly.includes(message.channel.name)) {
+    const roleAdmin = message.guild.roles.cache.find(r => r.name === "Admin");
+    if (!message.member.roles.cache.has(roleAdmin?.id)) {
+      await message.delete().catch(()=>{});
+      await message.author.send(`⚠️ Apenas administradores podem enviar mensagens neste canal.`);
+      return;
+    }
   }
 
-  // Se não for comando, ignora
-  if (!message.content.startsWith(PREFIX)) return;
+  // BLOQUEIO PARA CANAIS COMUNITÁRIOS (não apagar nada — mensagens de qualquer cargo são permitidas)
+  if (canaisComunitarios.includes(message.channel.name)) {
+    return; // não faz nada, todas as mensagens são permitidas
+  }
 
-  // Apenas processar comandos da sala de comandos
-  if (message.channel.id !== commandChannel.id) return;
+  // PROCESSAR COMANDOS APENAS NO CANAL DE COMANDOS
+  if (!message.content.startsWith(PREFIX) || message.channel.id !== commandChannel.id) return;
 
   const args = message.content.slice(PREFIX.length).trim().split(/ +/);
   const command = args.shift().toLowerCase();
@@ -308,5 +314,6 @@ app.get("/", (req, res) => res.send("Bot Discord online! ✅"));
 app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 
 client.login(BOT_TOKEN);
+
 
 
