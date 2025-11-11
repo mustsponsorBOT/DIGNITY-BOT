@@ -60,6 +60,45 @@ client.once("ready", async () => {
 
     console.log("🎭 Todas as roles foram verificadas ou criadas.");
 
+// ===============================
+// BLOCO CATEGORIA MAPAS TARKOV
+// ===============================
+
+const categoriaMapas = guild.channels.cache.find(
+  c => c.name.includes("🗺️・MAPAS TARKOV") && c.type === 4
+);
+
+if (categoriaMapas) {
+  const subCanais = guild.channels.cache.filter(c => c.parentId === categoriaMapas.id);
+
+  for (const canal of subCanais.values()) {
+    if (canal.name === "chat-comum") {
+      await canal.permissionOverwrites.set([
+        { id: guild.roles.everyone.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+        { id: roleDesconhecido.id, deny: ["ViewChannel", "SendMessages"] },
+        { id: roleMembro.id, allow: ["ViewChannel", "SendMessages"] }, // só neste canal pode escrever
+        { id: roleAdmin.id, allow: ["ViewChannel", "SendMessages"] },
+        { id: roleMod.id, allow: ["ViewChannel", "SendMessages"] },
+        { id: roleStreamer.id, allow: ["ViewChannel", "SendMessages"] },
+        { id: roleJoin.id, allow: ["ViewChannel", "SendMessages"] },
+        { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
+      ]);
+    } else {
+      await canal.permissionOverwrites.set([
+        { id: guild.roles.everyone.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+        { id: roleDesconhecido.id, deny: ["ViewChannel", "SendMessages"] },
+        { id: roleMembro.id, allow: ["ViewChannel"], deny: ["SendMessages"] }, // só vê
+        { id: roleAdmin.id, allow: ["ViewChannel", "SendMessages"] },
+        { id: roleMod.id, allow: ["ViewChannel", "SendMessages"] },
+        { id: roleStreamer.id, allow: ["ViewChannel", "SendMessages"] },
+        { id: roleJoin.id, allow: ["ViewChannel", "SendMessages"] },
+        { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
+      ]);
+    }
+    console.log(`🔐 Permissões aplicadas: ${canal.name} (Mapas Tarkov)`);
+  }
+}
+    
     // ===============================
     // CANAL DE REGRAS
     // ===============================
@@ -202,46 +241,52 @@ if (!afkChannel) {
 await guild.edit({ afkChannel: afkChannel.id, afkTimeout: 900 });
 console.log("⏱️ Configuração AFK aplicada: canal AFK + timeout 15 minutos");
 
-// ------------------------------------
-// SALA TEMPORÁRIA
-// ------------------------------------
-if (categoriaComunitaria) {
-  let tempRoomChannel = guild.channels.cache.find(
-    c => c.name === "🎛️・criar-sala-temporaria"
-  );
+// ===============================
+// BLOCO SALAS TEMPORÁRIAS
+// ===============================
 
-  if (!tempRoomChannel) {
-    tempRoomChannel = await guild.channels.create({
-      name: "🎛️・criar-sala-temporaria",
-      type: 0, // GUILD_TEXT
-      parent: categoriaComunitaria.id,
-      reason: "Canal para criar salas temporárias",
-      permissionOverwrites: [
-        { id: guild.roles.everyone.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
-        { id: roleDesconhecido.id, deny: ["ViewChannel", "SendMessages"] },
-        { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
-      ],
-    });
+const categoriaTempRooms = guild.channels.cache.find(
+  c => c.name.includes("SALAS TEMPORÁRIAS") && c.type === 4
+) || await guild.channels.create({
+  name: "SALAS TEMPORÁRIAS",
+  type: 4, // Categoria
+  reason: "Categoria para salas temporárias"
+});
 
-    // Move o canal para o **final do servidor, antes do canal AFK**
-    await tempRoomChannel.setPosition(afkChannel.position - 1);
+console.log("🆕 Categoria SALAS TEMPORÁRIAS verificada ou criada");
 
-    console.log("🆕 Canal de criar sala temporária criado e posicionado corretamente");
-  }
+let tempRoomChannel = guild.channels.cache.find(
+  c => c.name === "🎛️・criar-sala-temporaria" && c.parentId === categoriaTempRooms.id
+);
 
-  // Mensagem com botão
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId("create_temp_room")
-      .setLabel("📌 Criar Sala Temporária")
-      .setStyle(ButtonStyle.Primary)
-  );
-
-  await tempRoomChannel.send({
-    content: "Clique no botão para criar a sua sala temporária:",
-    components: [row]
+if (!tempRoomChannel) {
+  tempRoomChannel = await guild.channels.create({
+    name: "🎛️・criar-sala-temporaria",
+    type: 0, // GUILD_TEXT
+    parent: categoriaTempRooms.id,
+    reason: "Canal para criar salas temporárias",
+    permissionOverwrites: [
+      { id: guild.roles.everyone.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+      { id: roleDesconhecido.id, deny: ["ViewChannel", "SendMessages"] },
+      { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
+    ],
   });
+
+  console.log("🆕 Canal de criar sala temporária criado na categoria SALAS TEMPORÁRIAS");
 }
+
+// Mensagem com botão
+const row = new ActionRowBuilder().addComponents(
+  new ButtonBuilder()
+    .setCustomId("create_temp_room")
+    .setLabel("📌 Criar Sala Temporária")
+    .setStyle(ButtonStyle.Primary)
+);
+
+await tempRoomChannel.send({
+  content: "Clique no botão para criar a sua sala temporária:",
+  components: [row]
+});
 
     // ===============================
     // CANAIS ADMIN-ONLY
@@ -388,10 +433,19 @@ client.on(Events.InteractionCreate, async interaction => {
       return interaction.reply({ content: "⚠️ Categoria comunitária não encontrada.", ephemeral: true });
     }
 
+// Pega a categoria de SALAS TEMPORÁRIAS
+const categoriaTempRooms = guild.channels.cache.find(
+  c => c.name.includes("SALAS TEMPORÁRIAS") && c.type === 4
+) || await guild.channels.create({
+  name: "SALAS TEMPORÁRIAS",
+  type: 4,
+  reason: "Categoria para salas temporárias"
+});
+
 const tempVoiceChannel = await guild.channels.create({
   name: `🔊・${member.user.username}`,
   type: 2, // GUILD_VOICE
-  parent: categoriaComunitaria.id,
+  parent: categoriaTempRooms.id, // ← agora vai para a categoria certa
   reason: "Sala temporária criada pelo usuário"
 });
 
@@ -498,6 +552,7 @@ app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 // LOGIN DO BOT
 // ===============================
 client.login(BOT_TOKEN);
+
 
 
 
