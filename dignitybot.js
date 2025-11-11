@@ -417,6 +417,22 @@ await member.send({
 }).catch(() => {
   console.log(`⚠️ Não foi possível enviar DM para ${member.user.tag}`);
 });
+
+// Enviar mensagem de boas-vindas na sala de registo
+const { EmbedBuilder } = require('discord.js');
+
+const welcomeEmbed = new EmbedBuilder()
+  .setColor("#00ff00")
+  .setTitle(`🎉 Bem-vindo ${member.user.username}!`)
+  .setDescription(`Bem-vindo à comunidade **Dignity Esports**!`)
+  .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
+  .setFooter({ text: `Membro #${guild.memberCount}` })
+  .setTimestamp();
+
+const registoChannel = guild.channels.cache.find(c => c.name.includes("registo") && c.type === 0);
+if (registoChannel) {
+  await registoChannel.send({ embeds: [welcomeEmbed] });
+}
     
     // 🔒 Bloquear Membro da Comunidade na categoria Admin/Mod e sub-canais
     const categoriaAdmin = guild.channels.cache.find(
@@ -579,6 +595,7 @@ app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 // LOGIN DO BOT
 // ===============================
 client.login(BOT_TOKEN);
+
 
 
 
