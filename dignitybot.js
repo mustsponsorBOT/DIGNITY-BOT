@@ -344,10 +344,10 @@ for (const canal of subCanais.values()) {
 
 console.log("🔐 Categoria 🔒・Admin / Moderador pronta e permissões aplicadas");
 
- } catch (err) {
+} catch (err) {
     console.error("❌ Erro no setup inicial:", err);
-  }
-}); // 🔹 FECHA client.once("ready")
+}
+}); // fecha client.once("ready")
 
 // ===============================
 // NOVO MEMBRO
@@ -545,6 +545,7 @@ app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 // LOGIN DO BOT
 // ===============================
 client.login(BOT_TOKEN);
+
 
 
 
