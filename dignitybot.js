@@ -125,12 +125,12 @@ const rowVerify = new ActionRowBuilder().addComponents(
 );
 
       const messages = await regrasChannel.messages.fetch({ limit: 20 }).catch(() => new Map());
-      const existingMessage = messages.find(m =>
-        m.author.id === client.user.id &&
-        m.components.length > 0 &&
-        ((m.components[0].components?.[0]?.customId === "verify_button") ||
-         (m.components[0].components?.[0]?.data?.custom_id === "verify_button"))
-      );
+      const existingMessage = messages.find(m => {
+  if (m.author.id !== client.user.id) return false;
+  if (m.components.length === 0) return false;
+  const comp0 = m.components[0].components?.[0];
+  return comp0?.customId === "verify_button" || comp0?.data?.custom_id === "verify_button";
+});
 
       const regrasContent = `
 🎮 **REGRAS DO SERVIDOR**  
@@ -169,13 +169,13 @@ Interage, joga com a malta, partilha clips, memes e momentos do stream. O servid
 Podes criar a tua própria sala, de modo tempoário, a mesma é automáticamente movida para o final do servidor e apagada se não estiver nenhum membro online há mais de 5 minutos+
 
 1️⃣2️⃣ Movido para AFK
-Se estiveres sem registo de voz há mais de 15 minutos és automáticamente movido para o canal AFK.
-`;
+Se estiveres sem registo de voz há mais de 15 minutos és automáticamente movido para o canal AFK.`;
 
-      if (!existingMessage) {
-        await regrasChannel.send({ content: regrasContent, components: [row] });
-        console.log("📩 Mensagem de verificação enviada em 📜・regras");
-      } else console.log("ℹ️ Mensagem de verificação já existe");
+if (!existingMessage) {
+  await regrasChannel.send({ content: regrasContent, components: [row] });
+  console.log("📩 Mensagem de verificação enviada em 📜・regras");
+} else {
+  console.log("ℹ️ Mensagem de verificação já existe");
     } catch (err) {
   console.error("❌ Erro no setup inicial:", err);
 }
@@ -547,6 +547,7 @@ app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 // LOGIN DO BOT
 // ===============================
 client.login(BOT_TOKEN);
+
 
 
 
