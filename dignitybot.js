@@ -410,6 +410,13 @@ client.on(Events.InteractionCreate, async interaction => {
 
     await member.roles.remove(roleDesconhecido).catch(() => {});
     await member.roles.add(roleMembro).catch(() => {});
+
+// ✅ Envia mensagem privada
+await member.send({
+  content: "✅ **Foste verificado com sucesso!**\nFoste verificado com sucesso em DIGNITY ESPORTS! Bem-vindo à comunidade Dignity!"
+}).catch(() => {
+  console.log(`⚠️ Não foi possível enviar DM para ${member.user.tag}`);
+});
     
     // 🔒 Bloquear Membro da Comunidade na categoria Admin/Mod e sub-canais
     const categoriaAdmin = guild.channels.cache.find(
@@ -572,6 +579,7 @@ app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 // LOGIN DO BOT
 // ===============================
 client.login(BOT_TOKEN);
+
 
 
 
