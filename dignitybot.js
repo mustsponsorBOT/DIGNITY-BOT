@@ -158,7 +158,40 @@ Interage, joga com a malta, partilha clips, memes e momentos do stream. O servid
       await canal.permissionOverwrites.set(perms);
       console.log(`🔐 Permissões aplicadas: ${name}`);
     }
+    
+// ===============================
+// CATEGORIA AFK E CANAL AFK
+// ===============================
+let afkChannel = guild.channels.cache.find(c => c.name === "AFK" && c.type === 2); // 2 = GUILD_VOICE
+if (!afkChannel) {
+  afkChannel = await guild.channels.create({
+    name: "AFK",
+    type: 2, // Canal de voz
+    reason: "Canal AFK para usuários inativos",
+  });
+  console.log("🆕 Canal AFK criado");
+}
 
+// Define a categoria AFK (opcional) ou move para uma categoria existente
+let afkCategory = guild.channels.cache.find(c => c.name === "AFK" && c.type === 4); // 4 = Category
+if (!afkCategory) {
+  afkCategory = await guild.channels.create({
+    name: "AFK",
+    type: 4, // Categoria
+    reason: "Categoria AFK",
+  });
+  console.log("🆕 Categoria AFK criada");
+}
+
+// Move o canal AFK para a categoria
+if (afkChannel.parentId !== afkCategory.id) {
+  await afkChannel.setParent(afkCategory.id);
+}
+
+// Define o timeout de AFK do servidor
+await guild.edit({ afkChannel: afkChannel.id, afkTimeout: 900 }); // 900 segundos = 15 minutos
+console.log("⏱️ Configuração AFK aplicada: canal e timeout de 15 minutos");
+    
     // ===============================
     // CANAIS ADMIN-ONLY
     // ===============================
@@ -367,6 +400,7 @@ app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 // LOGIN DO BOT
 // ===============================
 client.login(BOT_TOKEN);
+
 
 
 
