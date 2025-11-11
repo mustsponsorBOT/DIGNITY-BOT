@@ -235,20 +235,45 @@ client.on(Events.GuildMemberAdd, async member => {
 // ===============================
 client.on(Events.InteractionCreate, async interaction => {
   if (!interaction.isButton() || interaction.customId !== "verify_button") return;
+
   try {
-    const member = await interaction.guild.members.fetch(interaction.user.id);
-    const roleDesconhecido = interaction.guild.roles.cache.find(r => r.name === "Desconhecido");
-    const roleMembro = interaction.guild.roles.cache.find(r => r.name === "Membro da Comunidade");
-    if (!roleDesconhecido || !roleMembro) return interaction.reply({ content: "⚠️ Cargos não encontrados.", ephemeral: true });
+    const guild = interaction.guild; // <-- NECESSÁRIO para usar "guild"
+    const member = await guild.members.fetch(interaction.user.id);
+
+    const roleDesconhecido = guild.roles.cache.find(r => r.name === "Desconhecido");
+    const roleMembro = guild.roles.cache.find(r => r.name === "Membro da Comunidade");
+
+    if (!roleDesconhecido || !roleMembro) {
+      return interaction.reply({ content: "⚠️ Cargos não encontrados.", ephemeral: true });
+    }
 
     await interaction.reply({ content: "⏳ A verificar...", ephemeral: true });
-    await member.roles.remove(roleDesconhecido).catch(()=>{});
-    await member.roles.add(roleMembro).catch(()=>{});
-    await interaction.editReply({ content: "✅ Verificado!" }).catch(()=>{});
-    console.log(`🧾 ${member.user.tag} verificado!`);
+
+    await member.roles.remove(roleDesconhecido).catch(() => {});
+    await member.roles.add(roleMembro).catch(() => {});
+
+    // 🔒 Bloquear Membro da Comunidade na categoria Admin/Mod e sub-canais
+    const categoriaAdmin = guild.channels.cache.find(
+      c => c.name.includes("Admin / Moderador") && c.type === 4 // 4 = Category
+    );
+
+    if (categoriaAdmin) {
+      await categoriaAdmin.permissionOverwrites.edit(roleMembro, { ViewChannel: false });
+
+      const subCanais = guild.channels.cache.filter(c => c.parentId === categoriaAdmin.id);
+      for (const canal of subCanais.values()) {
+        await canal.permissionOverwrites.edit(roleMembro, { ViewChannel: false });
+      }
+
+      console.log("🔒 Permissões atualizadas: Membro da Comunidade não vê Admin/Moderador");
+    }
+
+    await interaction.editReply({ content: "✅ Verificação concluída com sucesso!" });
   } catch (err) {
-    console.error("❌ Botão falhou:", err);
-    try { await interaction.followUp({ content: "❌ Erro ao verificar.", ephemeral: true }); } catch(e){};
+    console.error("❌ Erro na verificação:", err);
+    if (!interaction.replied) {
+      await interaction.reply({ content: "❌ Erro ao processar verificação.", ephemeral: true });
+    }
   }
 });
 
@@ -329,5 +354,6 @@ app.get("/", (req, res) => res.send("Bot Discord online! ✅"));
 app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 
 client.login(BOT_TOKEN);
+
 
 
