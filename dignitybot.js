@@ -117,12 +117,12 @@ if (regrasChannel) {
 }
 
       // Botão de verificação
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId("verify_button")
-          .setLabel("✅ Verificar Identidade")
-          .setStyle(ButtonStyle.Success)
-      );
+const rowVerify = new ActionRowBuilder().addComponents(
+  new ButtonBuilder()
+    .setCustomId("verify_button")
+    .setLabel("✅ Verificar Identidade")
+    .setStyle(ButtonStyle.Success)
+);
 
       const messages = await regrasChannel.messages.fetch({ limit: 20 }).catch(() => new Map());
       const existingMessage = messages.find(m =>
@@ -170,7 +170,7 @@ Podes criar a tua própria sala, de modo tempoário, a mesma é automáticamente
 
 1️⃣2️⃣ Movido para AFK
 Se estiveres sem registo de voz há mais de 15 minutos és automáticamente movido para o canal AFK.
-      `;
+`;
 
       if (!existingMessage) {
         await regrasChannel.send({ content: regrasContent, components: [row] });
@@ -269,7 +269,7 @@ if (!tempRoomChannel) {
 }
 
 // Mensagem com botão
-const row = new ActionRowBuilder().addComponents(
+const rowTemp = new ActionRowBuilder().addComponents(
   new ButtonBuilder()
     .setCustomId("create_temp_room")
     .setLabel("📌 Criar Sala Temporária")
@@ -547,6 +547,7 @@ app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 // LOGIN DO BOT
 // ===============================
 client.login(BOT_TOKEN);
+
 
 
 
