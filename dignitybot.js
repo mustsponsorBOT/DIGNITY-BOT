@@ -172,12 +172,10 @@ Podes criar a tua própria sala, de modo tempoário, a mesma é automáticamente
 Se estiveres sem registo de voz há mais de 15 minutos és automáticamente movido para o canal AFK.`;
 
 if (!existingMessage) {
-  await regrasChannel.send({ content: regrasContent, components: [row] });
+  await regrasChannel.send({ content: regrasContent, components: [rowVerify] });
   console.log("📩 Mensagem de verificação enviada em 📜・regras");
 } else {
   console.log("ℹ️ Mensagem de verificação já existe");
-    } catch (err) {
-  console.error("❌ Erro no setup inicial:", err);
 }
 
     // ===============================
@@ -268,8 +266,8 @@ if (!tempRoomChannel) {
   console.log("🆕 Canal de criar sala temporária criado na categoria SALAS TEMPORÁRIAS");
 }
 
-// Mensagem com botão
-const rowTemp = new ActionRowBuilder().addComponents(
+// Mensagem com botão de criar sala
+const tempRoomRow = new ActionRowBuilder().addComponents(
   new ButtonBuilder()
     .setCustomId("create_temp_room")
     .setLabel("📌 Criar Sala Temporária")
@@ -278,7 +276,7 @@ const rowTemp = new ActionRowBuilder().addComponents(
 
 await tempRoomChannel.send({
   content: "Clique no botão para criar a sua sala temporária:",
-  components: [row]
+  components: [tempRoomRow]
 });
 
     // ===============================
@@ -547,6 +545,7 @@ app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 // LOGIN DO BOT
 // ===============================
 client.login(BOT_TOKEN);
+
 
 
 
