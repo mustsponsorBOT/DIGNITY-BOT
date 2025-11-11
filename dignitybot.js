@@ -102,18 +102,19 @@ if (categoriaMapas) {
     // ===============================
     // CANAL DE REGRAS
     // ===============================
-    const regrasChannel = guild.channels.cache.find(c => c.name.includes("regras"));
-    if (regrasChannel) {
-      await regrasChannel.permissionOverwrites.set([
-        { id: guild.roles.everyone.id, deny: ["ViewChannel", "SendMessages"] },
-        { id: roleDesconhecido.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
-        { id: roleMembro.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
-        { id: roleAdmin.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
-        { id: roleMod.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
-        { id: roleStreamer.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
-        { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
-      ]);
-      console.log("🔐 Permissões aplicadas: 📜・regras");
+const regrasChannel = guild.channels.cache.find(c => c.name.includes("regras"));
+if (regrasChannel) {
+  await regrasChannel.permissionOverwrites.set([
+    { id: guild.roles.everyone.id, deny: ["ViewChannel", "SendMessages"] },
+    { id: roleDesconhecido.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+    { id: roleMembro.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+    { id: roleAdmin.id, allow: ["ViewChannel", "SendMessages"] },
+    { id: roleMod.id, allow: ["ViewChannel", "SendMessages"] },
+    { id: roleStreamer.id, allow: ["ViewChannel", "SendMessages"] },
+    { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
+  ]);
+  console.log("🔐 Permissões aplicadas: 📜・regras");
+}
 
       // Botão de verificação
       const row = new ActionRowBuilder().addComponents(
@@ -180,45 +181,33 @@ Se estiveres sem registo de voz há mais de 15 minutos és automáticamente movi
     // ===============================
     // CATEGORIA COMUNITÁRIA
     // ===============================
-    const canaisComunitarios = ["📸・memes", "🎬・clips", "🔫・airsoft-market", "‼️・comandos"];
-    for (const name of canaisComunitarios) {
-      const canal = guild.channels.cache.find(c => c.name === name);
-      if (!canal) continue;
+const canaisComunitarios = ["📸・memes", "🎬・clips", "🔫・airsoft-market", "‼️・comandos"];
+for (const name of canaisComunitarios) {
+  const canal = guild.channels.cache.find(c => c.name === name);
+  if (!canal) continue;
 
-      let perms = [
-        { id: guild.roles.everyone.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
-        { id: roleDesconhecido.id, deny: ["ViewChannel", "SendMessages"] },
-        { id: roleMembro.id, allow: ["ViewChannel"], deny: name === "‼️・comandos" ? ["SendMessages"] : [] },
-        { id: roleAdmin.id, allow: ["ViewChannel", "SendMessages"] },
-        { id: roleMod.id, allow: ["ViewChannel", "SendMessages"] },
-        { id: roleStreamer.id, allow: ["ViewChannel", "SendMessages"] },
-        { id: roleJoin.id, allow: ["ViewChannel", "SendMessages"] },
-        { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
-      ];
+  let perms = [
+    { id: guild.roles.everyone.id, deny: ["ViewChannel", "SendMessages"] },
+    { id: roleDesconhecido.id, deny: ["ViewChannel", "SendMessages"] },
+    { id: roleMembro.id, allow: ["ViewChannel", "SendMessages"] },
+    { id: roleAdmin.id, allow: ["ViewChannel", "SendMessages"] },
+    { id: roleMod.id, allow: ["ViewChannel", "SendMessages"] },
+    { id: roleStreamer.id, allow: ["ViewChannel", "SendMessages"] },
+    { id: roleJoin.id, allow: ["ViewChannel", "SendMessages"] },
+    { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
+  ];
 
-      await canal.permissionOverwrites.set(perms);
-      console.log(`🔐 Permissões aplicadas: ${name}`);
-    }
+  await canal.permissionOverwrites.set(perms);
+  console.log(`🔐 Permissões aplicadas: ${name} (COMUNIDADE DIGNITY)`);
+}
 
 // ===============================
 // BLOCO AFK + SALAS TEMPORÁRIAS
 // ===============================
 
-const categoriaComunitaria = guild.channels.cache.find(
-  c => c.name.includes("COMUNIDADE DIGNITY") && c.type === 4
-);
+const afkCategory = guild.channels.cache.find(c => c.name === "💨・AFK" && c.type === 4)
+  || await guild.channels.create({ name: "💨・AFK", type: 4, reason: "Categoria AFK" });
 
-const afkCategory = guild.channels.cache.find(
-  c => c.name === "💨・AFK" && c.type === 4
-) || await guild.channels.create({
-  name: "💨・AFK",
-  type: 4, // Categoria
-  reason: "Categoria AFK",
-});
-
-console.log("🆕 Categoria AFK verificada ou criada");
-
-// Canal AFK
 let afkChannel = guild.channels.cache.find(
   c => c.name === "AFK" && c.type === 2 && c.parentId === afkCategory.id
 );
@@ -226,11 +215,13 @@ let afkChannel = guild.channels.cache.find(
 if (!afkChannel) {
   afkChannel = await guild.channels.create({
     name: "AFK",
-    type: 2, // Canal de voz
+    type: 2, // GUILD_VOICE
     parent: afkCategory.id,
     reason: "Canal AFK para usuários inativos",
     permissionOverwrites: [
-      { id: guild.roles.everyone.id, allow: ["Connect"] }, // todos podem entrar
+      { id: guild.roles.everyone.id, deny: ["ViewChannel"] },
+      { id: roleDesconhecido.id, deny: ["ViewChannel"] },
+      { id: roleMembro.id, allow: ["Connect"] }, // pode entrar
       { id: client.user.id, allow: ["Connect", "ManageChannels"] },
     ],
   });
@@ -291,22 +282,24 @@ await tempRoomChannel.send({
     // ===============================
     // CANAIS ADMIN-ONLY
     // ===============================
-    const canaisAdminOnly = ["📺・must-setup", "🖊️・registo", "🤝・parcerias"];
-    for (const name of canaisAdminOnly) {
-      const canal = guild.channels.cache.find(c => c.name === name);
-      if (!canal) continue;
-      await canal.permissionOverwrites.set([
-        { id: guild.roles.everyone.id, deny: ["ViewChannel", "SendMessages"] },
-        { id: roleDesconhecido.id, deny: ["ViewChannel", "SendMessages"] },
-        { id: roleMembro.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
-        { id: roleAdmin.id, allow: ["ViewChannel", "SendMessages"] },
-        { id: roleMod.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
-        { id: roleStreamer.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
-        { id: roleJoin.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
-        { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
-      ]);
-      console.log(`🔐 Permissões aplicadas (admin-only): ${name}`);
-    }
+const canaisAdminOnly = ["🖊️・registo", "🤝・parcerias", "📺・must-setup", "🎛️・criar-sala-temporaria"];
+for (const name of canaisAdminOnly) {
+  const canal = guild.channels.cache.find(c => c.name === name);
+  if (!canal) continue;
+
+  await canal.permissionOverwrites.set([
+    { id: guild.roles.everyone.id, deny: ["ViewChannel", "SendMessages"] },
+    { id: roleDesconhecido.id, deny: ["ViewChannel", "SendMessages"] },
+    { id: roleMembro.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+    { id: roleAdmin.id, allow: ["ViewChannel", "SendMessages"] },
+    { id: roleMod.id, deny: ["ViewChannel", "SendMessages"] },
+    { id: roleStreamer.id, deny: ["ViewChannel", "SendMessages"] },
+    { id: roleJoin.id, deny: ["ViewChannel", "SendMessages"] },
+    { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
+  ]);
+
+  console.log(`🔐 Permissões aplicadas (admin-only): ${name}`);
+}
 
 // ===============================
 // CATEGORIA ADMIN / MODERADOR → visível apenas para Admin, Mod, STREAMER, Join
@@ -552,6 +545,7 @@ app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 // LOGIN DO BOT
 // ===============================
 client.login(BOT_TOKEN);
+
 
 
 
