@@ -222,9 +222,6 @@ for (const canal of subCanais.values()) {
 
 console.log("🔐 Categoria 🔒・Admin / Moderador pronta e permissões aplicadas");
 
-// ✅ FIM da parte da categoria Admin / Moderador
-} // <== Fecha apenas o if (categoriaAdmin)
-
  } catch (err) {
     console.error("❌ Erro no setup inicial:", err);
   }
@@ -370,5 +367,6 @@ app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 // LOGIN DO BOT
 // ===============================
 client.login(BOT_TOKEN);
+
 
 
