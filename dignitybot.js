@@ -176,7 +176,9 @@ Se estiveres sem registo de voz há mais de 15 minutos és automáticamente movi
         await regrasChannel.send({ content: regrasContent, components: [row] });
         console.log("📩 Mensagem de verificação enviada em 📜・regras");
       } else console.log("ℹ️ Mensagem de verificação já existe");
-    }
+    } catch (err) {
+  console.error("❌ Erro no setup inicial:", err);
+}
 
     // ===============================
     // CATEGORIA COMUNITÁRIA
@@ -545,6 +547,7 @@ app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 // LOGIN DO BOT
 // ===============================
 client.login(BOT_TOKEN);
+
 
 
 
