@@ -162,12 +162,49 @@ Se estiveres sem registo de voz há mais de 15 minutos és automáticamente movi
     }
 
 // ===============================
-// BLOCO DO BOTÃO PARA CRIAR SALA TEMPORÁRIA
+// BLOCO AFK + SALAS TEMPORÁRIAS
 // ===============================
+
 const categoriaComunitaria = guild.channels.cache.find(
   c => c.name.includes("COMUNIDADE DIGNITY") && c.type === 4
 );
 
+const afkCategory = guild.channels.cache.find(
+  c => c.name === "💨・AFK" && c.type === 4
+) || await guild.channels.create({
+  name: "💨・AFK",
+  type: 4, // Categoria
+  reason: "Categoria AFK",
+});
+
+console.log("🆕 Categoria AFK verificada ou criada");
+
+// Canal AFK
+let afkChannel = guild.channels.cache.find(
+  c => c.name === "AFK" && c.type === 2 && c.parentId === afkCategory.id
+);
+
+if (!afkChannel) {
+  afkChannel = await guild.channels.create({
+    name: "AFK",
+    type: 2, // Canal de voz
+    parent: afkCategory.id,
+    reason: "Canal AFK para usuários inativos",
+    permissionOverwrites: [
+      { id: guild.roles.everyone.id, allow: ["Connect"] }, // todos podem entrar
+      { id: client.user.id, allow: ["Connect", "ManageChannels"] },
+    ],
+  });
+  console.log("🆕 Canal AFK criado");
+}
+
+// Define o canal AFK do servidor
+await guild.edit({ afkChannel: afkChannel.id, afkTimeout: 900 });
+console.log("⏱️ Configuração AFK aplicada: canal AFK + timeout 15 minutos");
+
+// ------------------------------------
+// SALA TEMPORÁRIA
+// ------------------------------------
 if (categoriaComunitaria) {
   let tempRoomChannel = guild.channels.cache.find(
     c => c.name === "🎛️・criar-sala-temporaria"
@@ -180,22 +217,16 @@ if (categoriaComunitaria) {
       parent: categoriaComunitaria.id,
       reason: "Canal para criar salas temporárias",
       permissionOverwrites: [
-        {
-          id: guild.roles.everyone.id,
-          allow: ["ViewChannel"],
-          deny: ["SendMessages"],
-        },
-        {
-          id: roleDesconhecido.id,
-          deny: ["ViewChannel", "SendMessages"], // desconhecidos não veem
-        },
-        {
-          id: client.user.id,
-          allow: ["ViewChannel", "SendMessages", "ManageMessages"], // bot tem controle total
-        },
+        { id: guild.roles.everyone.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
+        { id: roleDesconhecido.id, deny: ["ViewChannel", "SendMessages"] },
+        { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageMessages"] },
       ],
     });
-    console.log("🆕 Canal de criar sala temporária criado");
+
+    // Move o canal para o **final do servidor, antes do canal AFK**
+    await tempRoomChannel.setPosition(afkChannel.position - 1);
+
+    console.log("🆕 Canal de criar sala temporária criado e posicionado corretamente");
   }
 
   // Mensagem com botão
@@ -211,40 +242,7 @@ if (categoriaComunitaria) {
     components: [row]
   });
 }
-    
-// ===============================
-// CATEGORIA AFK E CANAL AFK
-// ===============================
-let afkChannel = guild.channels.cache.find(c => c.name === "💨・AFK" && c.type === 2); // 2 = GUILD_VOICE
-if (!afkChannel) {
-  afkChannel = await guild.channels.create({
-    name: "AFK",
-    type: 2, // Canal de voz
-    reason: "Canal AFK para usuários inativos",
-  });
-  console.log("🆕 Canal AFK criado");
-}
 
-// Define a categoria AFK (opcional) ou move para uma categoria existente
-let afkCategory = guild.channels.cache.find(c => c.name === "AFK" && c.type === 4); // 4 = Category
-if (!afkCategory) {
-  afkCategory = await guild.channels.create({
-    name: "AFK",
-    type: 4, // Categoria
-    reason: "Categoria 💨・AFK",
-  });
-  console.log("🆕 Categoria AFK criada");
-}
-
-// Move o canal AFK para a categoria
-if (afkChannel.parentId !== afkCategory.id) {
-  await afkChannel.setParent(afkCategory.id);
-}
-
-// Define o timeout de AFK do servidor
-await guild.edit({ afkChannel: afkChannel.id, afkTimeout: 900 }); // 900 segundos = 15 minutos
-console.log("⏱️ Configuração AFK aplicada: canal e timeout de 15 minutos");
-    
     // ===============================
     // CANAIS ADMIN-ONLY
     // ===============================
@@ -390,12 +388,18 @@ client.on(Events.InteractionCreate, async interaction => {
       return interaction.reply({ content: "⚠️ Categoria comunitária não encontrada.", ephemeral: true });
     }
 
-    const tempVoiceChannel = await guild.channels.create({
-      name: `🔊・${member.user.username}`,
-      type: 2, // GUILD_VOICE
-      parent: categoriaComunitaria.id,
-      reason: "Sala temporária criada pelo usuário"
-    });
+const tempVoiceChannel = await guild.channels.create({
+  name: `🔊・${member.user.username}`,
+  type: 2, // GUILD_VOICE
+  parent: categoriaComunitaria.id,
+  reason: "Sala temporária criada pelo usuário"
+});
+
+// Move a sala temporária para o final do servidor, antes da categoria AFK
+const afkChannel = guild.channels.cache.find(c => c.name === "💨・AFK" && c.type === 2);
+if (afkChannel) {
+  await tempVoiceChannel.setPosition(afkChannel.position - 1).catch(() => {});
+}
 
     await tempVoiceChannel.permissionOverwrites.create(member.id, { Connect: true, ManageChannels: true });
 
@@ -494,6 +498,7 @@ app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 // LOGIN DO BOT
 // ===============================
 client.login(BOT_TOKEN);
+
 
 
 
