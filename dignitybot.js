@@ -212,7 +212,10 @@ if (categoriaAdmin) {
   }
 
   console.log("🔐 Categoria 🔒・Admin / Moderador: invisível para Membro da Comunidade");
-}
+} // <== Fecha apenas o if (categoriaAdmin)
+
+
+}); // 🔹 FECHA client.once("ready")
 
 // ===============================
 // NOVO MEMBRO
@@ -354,3 +357,4 @@ app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 // LOGIN DO BOT
 // ===============================
 client.login(BOT_TOKEN);
+
