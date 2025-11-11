@@ -204,9 +204,14 @@ for (const name of canaisComunitarios) {
 // ===============================
 // BLOCO AFK + SALAS TEMPORÁRIAS
 // ===============================
-
-const afkCategory = guild.channels.cache.find(c => c.name === "💨・AFK" && c.type === 4)
-  || await guild.channels.create({ name: "💨・AFK", type: 4, reason: "Categoria AFK" });
+let afkCategory = guild.channels.cache.find(c => c.name === "💨・AFK" && c.type === 4);
+if (!afkCategory) {
+  afkCategory = await guild.channels.create({
+    name: "💨・AFK",
+    type: 4,
+    reason: "Categoria AFK"
+  });
+}
 
 let afkChannel = guild.channels.cache.find(
   c => c.name === "AFK" && c.type === 2 && c.parentId === afkCategory.id
@@ -545,6 +550,7 @@ app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 // LOGIN DO BOT
 // ===============================
 client.login(BOT_TOKEN);
+
 
 
 
