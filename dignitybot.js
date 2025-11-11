@@ -72,7 +72,7 @@ if (categoriaMapas) {
   const subCanais = guild.channels.cache.filter(c => c.parentId === categoriaMapas.id);
 
   for (const canal of subCanais.values()) {
-    if (canal.name === "chat-comum") {
+    if (canal.name === "chat-tarkov") {
       await canal.permissionOverwrites.set([
         { id: guild.roles.everyone.id, allow: ["ViewChannel"], deny: ["SendMessages"] },
         { id: roleDesconhecido.id, deny: ["ViewChannel", "SendMessages"] },
@@ -552,6 +552,7 @@ app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 // LOGIN DO BOT
 // ===============================
 client.login(BOT_TOKEN);
+
 
 
 
