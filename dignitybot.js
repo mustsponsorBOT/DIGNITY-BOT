@@ -237,6 +237,28 @@ if (!afkChannel) {
 await guild.edit({ afkChannel: afkChannel.id, afkTimeout: 900 });
 console.log("⏱️ Configuração AFK aplicada: canal AFK + timeout 15 minutos");
 
+// 🔧 Garantir permissões corretas do canal AFK
+await afkChannel.permissionOverwrites.set([
+  // Ninguém sem role vê o canal
+  { id: guild.roles.everyone.id, deny: ["ViewChannel", "Connect", "Speak", "SendMessages"] },
+
+  // Role Desconhecido também não vê nem entra
+  { id: roleDesconhecido.id, deny: ["ViewChannel", "Connect", "Speak", "SendMessages"] },
+
+  // Membros podem ver e conectar, mas não falar nem enviar mensagens
+  { id: roleMembro.id, allow: ["ViewChannel", "Connect"], deny: ["Speak", "SendMessages"] },
+
+  // Admins, Mods e Streamers podem ver e conectar (também silenciados)
+  { id: roleAdmin.id, allow: ["ViewChannel", "Connect"], deny: ["Speak", "SendMessages"] },
+  { id: roleMod.id, allow: ["ViewChannel", "Connect"], deny: ["Speak", "SendMessages"] },
+  { id: roleStreamer.id, allow: ["ViewChannel", "Connect"], deny: ["Speak", "SendMessages"] },
+  { id: roleJoin.id, allow: ["ViewChannel", "Connect"], deny: ["Speak", "SendMessages"] },
+
+  // O próprio bot tem controlo total
+  { id: client.user.id, allow: ["ViewChannel", "Connect", "ManageChannels"] }
+]);
+console.log("🔇 Permissões do canal AFK aplicadas com sucesso");
+    
 // ===============================
 // BLOCO SALAS TEMPORÁRIAS
 // ===============================
@@ -550,6 +572,7 @@ app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 // LOGIN DO BOT
 // ===============================
 client.login(BOT_TOKEN);
+
 
 
 
