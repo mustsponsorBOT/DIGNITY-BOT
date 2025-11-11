@@ -182,39 +182,52 @@ Interage, joga com a malta, partilha clips, memes e momentos do stream. O servid
 // ===============================
 // CATEGORIA ADMIN / MODERADOR → visível apenas para Admin, Mod, STREAMER, Join
 // ===============================
-const categoriaAdmin = guild.channels.cache.find(
-  c => c.name.includes("Admin / Moderador") && c.type === 4 // 4 = Category
+let categoriaAdmin = guild.channels.cache.find(
+  c => c.name.includes("Admin / Moderador") && c.type === 4
 );
 
-if (categoriaAdmin) {
-  await categoriaAdmin.permissionOverwrites.set([
-    { id: guild.roles.everyone.id, deny: ["ViewChannel"] },     // Bloqueia todos por padrão
-    { id: roleMembro.id, deny: ["ViewChannel"] },               // Membro da Comunidade não vê
-    { id: roleJoin.id, allow: ["ViewChannel"] },                // Join vê
-    { id: roleStreamer.id, allow: ["ViewChannel"] },            // STREAMER vê
-    { id: roleMod.id, allow: ["ViewChannel"] },                 // Moderador vê
-    { id: roleAdmin.id, allow: ["ViewChannel"] },               // Admin vê
+if (!categoriaAdmin) {
+  categoriaAdmin = await guild.channels.create({
+    name: "Admin / Moderador",
+    type: 4, // Category
+    reason: "Categoria para canais Admin / Moderador"
+  });
+  console.log("🆕 Categoria 🔒・Admin / Moderador criada");
+}
+
+// Agora aplica as permissões
+await categoriaAdmin.permissionOverwrites.set([
+  { id: guild.roles.everyone.id, deny: ["ViewChannel"] },
+  { id: roleMembro.id, deny: ["ViewChannel"] },
+  { id: roleJoin.id, allow: ["ViewChannel"] },
+  { id: roleStreamer.id, allow: ["ViewChannel"] },
+  { id: roleMod.id, allow: ["ViewChannel"] },
+  { id: roleAdmin.id, allow: ["ViewChannel"] },
+  { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageChannels", "ManageRoles"] }
+]);
+
+// Aplica o mesmo a todos os canais dentro da categoria
+const subCanais = guild.channels.cache.filter(c => c.parentId === categoriaAdmin.id);
+for (const canal of subCanais.values()) {
+  await canal.permissionOverwrites.set([
+    { id: guild.roles.everyone.id, deny: ["ViewChannel"] },
+    { id: roleMembro.id, deny: ["ViewChannel"] },
+    { id: roleJoin.id, allow: ["ViewChannel"] },
+    { id: roleStreamer.id, allow: ["ViewChannel"] },
+    { id: roleMod.id, allow: ["ViewChannel"] },
+    { id: roleAdmin.id, allow: ["ViewChannel"] },
     { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageChannels", "ManageRoles"] }
   ]);
+}
 
-  // aplica o mesmo a todos os canais dentro da categoria
-  const subCanais = guild.channels.cache.filter(c => c.parentId === categoriaAdmin.id);
-  for (const canal of subCanais.values()) {
-    await canal.permissionOverwrites.set([
-      { id: guild.roles.everyone.id, deny: ["ViewChannel"] },
-      { id: roleMembro.id, deny: ["ViewChannel"] },
-      { id: roleJoin.id, allow: ["ViewChannel"] },
-      { id: roleStreamer.id, allow: ["ViewChannel"] },
-      { id: roleMod.id, allow: ["ViewChannel"] },
-      { id: roleAdmin.id, allow: ["ViewChannel"] },
-      { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageChannels", "ManageRoles"] }
-    ]);
-  }
+console.log("🔐 Categoria 🔒・Admin / Moderador pronta e permissões aplicadas");
 
-  console.log("🔐 Categoria 🔒・Admin / Moderador: invisível para Membro da Comunidade");
+// ✅ FIM da parte da categoria Admin / Moderador
 } // <== Fecha apenas o if (categoriaAdmin)
 
-
+ } catch (err) {
+    console.error("❌ Erro no setup inicial:", err);
+  }
 }); // 🔹 FECHA client.once("ready")
 
 // ===============================
@@ -357,4 +370,5 @@ app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 // LOGIN DO BOT
 // ===============================
 client.login(BOT_TOKEN);
+
 
