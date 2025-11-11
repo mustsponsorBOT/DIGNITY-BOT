@@ -125,9 +125,11 @@ Durante jogos ou chats de voz, evita gritar, fazer ruído constante ou usar soun
 🔟 Diverte-te e participa! 
 Interage, joga com a malta, partilha clips, memes e momentos do stream. O servidor é da comunidade — faz parte dela!
 
-1️⃣1️⃣ INCOMING
+1️⃣1️⃣ Cria uma sala temporária!
+Podes criar a tua própria sala, de modo tempoário, a mesma é automáticamente movida para o final do servidor e apagada se não estiver nenhum membro online há mais de 5 minutos+
 
-1️⃣2️⃣ INCOMING
+1️⃣2️⃣ Movido para AFK
+Se estiveres sem registo de voz há mais de 15 minutos és automáticamente movido para o canal AFK.
       `;
 
       if (!existingMessage) {
@@ -158,11 +160,62 @@ Interage, joga com a malta, partilha clips, memes e momentos do stream. O servid
       await canal.permissionOverwrites.set(perms);
       console.log(`🔐 Permissões aplicadas: ${name}`);
     }
+
+// ===============================
+// BLOCO DO BOTÃO PARA CRIAR SALA TEMPORÁRIA
+// ===============================
+const categoriaComunitaria = guild.channels.cache.find(
+  c => c.name.includes("COMUNIDADE DIGNITY") && c.type === 4
+);
+
+if (categoriaComunitaria) {
+  let tempRoomChannel = guild.channels.cache.find(
+    c => c.name === "🎛️・criar-sala-temporaria"
+  );
+
+  if (!tempRoomChannel) {
+    tempRoomChannel = await guild.channels.create({
+      name: "🎛️・criar-sala-temporaria",
+      type: 0, // GUILD_TEXT
+      parent: categoriaComunitaria.id,
+      reason: "Canal para criar salas temporárias",
+      permissionOverwrites: [
+        {
+          id: guild.roles.everyone.id,
+          allow: ["ViewChannel"],
+          deny: ["SendMessages"],
+        },
+        {
+          id: roleDesconhecido.id,
+          deny: ["ViewChannel", "SendMessages"], // desconhecidos não veem
+        },
+        {
+          id: client.user.id,
+          allow: ["ViewChannel", "SendMessages", "ManageMessages"], // bot tem controle total
+        },
+      ],
+    });
+    console.log("🆕 Canal de criar sala temporária criado");
+  }
+
+  // Mensagem com botão
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId("create_temp_room")
+      .setLabel("📌 Criar Sala Temporária")
+      .setStyle(ButtonStyle.Primary)
+  );
+
+  await tempRoomChannel.send({
+    content: "Clique no botão para criar a sua sala temporária:",
+    components: [row]
+  });
+}
     
 // ===============================
 // CATEGORIA AFK E CANAL AFK
 // ===============================
-let afkChannel = guild.channels.cache.find(c => c.name === "AFK" && c.type === 2); // 2 = GUILD_VOICE
+let afkChannel = guild.channels.cache.find(c => c.name === "💨・AFK" && c.type === 2); // 2 = GUILD_VOICE
 if (!afkChannel) {
   afkChannel = await guild.channels.create({
     name: "AFK",
@@ -178,7 +231,7 @@ if (!afkCategory) {
   afkCategory = await guild.channels.create({
     name: "AFK",
     type: 4, // Categoria
-    reason: "Categoria AFK",
+    reason: "Categoria 💨・AFK",
   });
   console.log("🆕 Categoria AFK criada");
 }
@@ -216,12 +269,12 @@ console.log("⏱️ Configuração AFK aplicada: canal e timeout de 15 minutos")
 // CATEGORIA ADMIN / MODERADOR → visível apenas para Admin, Mod, STREAMER, Join
 // ===============================
 let categoriaAdmin = guild.channels.cache.find(
-  c => c.name.includes("Admin / Moderador") && c.type === 4
+  c => c.name.includes("🔒・Admin / Moderador") && c.type === 4
 );
 
 if (!categoriaAdmin) {
   categoriaAdmin = await guild.channels.create({
-    name: "Admin / Moderador",
+    name: "🔒・Admin / Moderador",
     type: 4, // Category
     reason: "Categoria para canais Admin / Moderador"
   });
@@ -294,7 +347,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
     await member.roles.remove(roleDesconhecido).catch(() => {});
     await member.roles.add(roleMembro).catch(() => {});
-
+    
     // 🔒 Bloquear Membro da Comunidade na categoria Admin/Mod e sub-canais
     const categoriaAdmin = guild.channels.cache.find(
       c => c.name.includes("Admin / Moderador") && c.type === 4 // 4 = Category
@@ -317,6 +370,47 @@ client.on(Events.InteractionCreate, async interaction => {
     if (!interaction.replied) {
       await interaction.reply({ content: "❌ Erro ao processar verificação.", ephemeral: true });
     }
+  }
+});
+
+// ===============================
+// INTERAÇÃO DO BOTÃO PARA CRIAR SALA TEMPORÁRIA
+// ===============================
+client.on(Events.InteractionCreate, async interaction => {
+  if (!interaction.isButton()) return;
+
+  if (interaction.customId === "create_temp_room") {
+    const guild = interaction.guild;
+    const member = await guild.members.fetch(interaction.user.id);
+    const categoriaComunitaria = guild.channels.cache.find(
+      c => c.name.includes("COMUNIDADE DIGNITY") && c.type === 4
+    );
+
+    if (!categoriaComunitaria) {
+      return interaction.reply({ content: "⚠️ Categoria comunitária não encontrada.", ephemeral: true });
+    }
+
+    const tempVoiceChannel = await guild.channels.create({
+      name: `🔊・${member.user.username}`,
+      type: 2, // GUILD_VOICE
+      parent: categoriaComunitaria.id,
+      reason: "Sala temporária criada pelo usuário"
+    });
+
+    await tempVoiceChannel.permissionOverwrites.create(member.id, { Connect: true, ManageChannels: true });
+
+    await interaction.reply({ content: `✅ Sala temporária criada: ${tempVoiceChannel.name}`, ephemeral: true });
+
+    console.log(`🆕 Sala temporária criada: ${tempVoiceChannel.name} por ${member.user.tag}`);
+
+    // Remove a sala após 5 minutos se estiver vazia
+    setTimeout(async () => {
+      const channel = guild.channels.cache.get(tempVoiceChannel.id);
+      if (channel && channel.members.size === 0) {
+        await channel.delete().catch(() => {});
+        console.log(`🗑️ Sala temporária removida: ${tempVoiceChannel.name}`);
+      }
+    }, 300000); // 5 minutos
   }
 });
 
@@ -400,6 +494,7 @@ app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 // LOGIN DO BOT
 // ===============================
 client.login(BOT_TOKEN);
+
 
 
 
