@@ -395,6 +395,8 @@ client.on(Events.GuildMemberAdd, async member => {
 client.on(Events.InteractionCreate, async interaction => {
   if (!interaction.isButton() || interaction.customId !== "verify_button") return;
 
+  await interaction.deferReply({ ephemeral: true }); // 👈 evita timeout e falha de interação
+
   try {
     const guild = interaction.guild; // <-- NECESSÁRIO para usar "guild"
     const member = await guild.members.fetch(interaction.user.id);
@@ -405,8 +407,6 @@ client.on(Events.InteractionCreate, async interaction => {
     if (!roleDesconhecido || !roleMembro) {
       return interaction.reply({ content: "⚠️ Cargos não encontrados.", ephemeral: true });
     }
-
-    await interaction.reply({ content: "⏳ A verificar...", ephemeral: true });
 
     await member.roles.remove(roleDesconhecido).catch(() => {});
     await member.roles.add(roleMembro).catch(() => {});
@@ -466,6 +466,7 @@ client.on(Events.InteractionCreate, async interaction => {
   if (!interaction.isButton()) return;
 
   if (interaction.customId === "create_temp_room") {
+    await interaction.deferReply({ ephemeral: true }); // 👈 evita timeout e falha de interação
     const guild = interaction.guild;
     const member = await guild.members.fetch(interaction.user.id);
     const categoriaComunitaria = guild.channels.cache.find(
@@ -500,7 +501,7 @@ if (afkChannel) {
 
     await tempVoiceChannel.permissionOverwrites.create(member.id, { Connect: true, ManageChannels: true });
 
-    await interaction.reply({ content: `✅ Sala temporária criada: ${tempVoiceChannel.name}`, ephemeral: true });
+    await interaction.editReply({ content: `✅ Sala temporária criada: ${tempVoiceChannel.name}` });
 
     console.log(`🆕 Sala temporária criada: ${tempVoiceChannel.name} por ${member.user.tag}`);
 
@@ -595,6 +596,7 @@ app.listen(PORT, () => console.log(`🌐 Servidor web na porta ${PORT}`));
 // LOGIN DO BOT
 // ===============================
 client.login(BOT_TOKEN);
+
 
 
 
